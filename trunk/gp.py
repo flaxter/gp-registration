@@ -30,6 +30,15 @@ def gp_chol(X,y,pts,sigma=0.01):
     var = getK(pts,pts) - dot(v.T,v) + sigma**2
     return mean, var
 
+def getLogL(mean, cov, ptsY):
+    D = mean.shape[0]
+    invCov = inv(cov)
+    deltMean = ptsY - mean
+    LL = .5*log(linalg.det(cov)) 
+    LL += .5*dot(dot(deltMean.T, invCov), deltMean)) 
+    LL += D/2.0*log(2*3.1415926535)
+    return LL
+
 def case1D():
     import pylab as pl
     import numpy as np
@@ -87,43 +96,51 @@ def case2D():
     ys = 2*rand(1000) - 1
     zs = generate(xs, ys, 0.0)
    
-    # now pick some new test points    
-    #xnew = 2*rand(100) - 1
-    #ynew = 2*rand(100) - 1
-    xnew = np.linspace(-1, 1, 50)
-    ynew = np.linspace(-1, 1, 50)
-    X, Y = np.meshgrid(xnew, ynew)
-        
+    # now pick some new test points 
+    randPoints = True  
+    if randPoints == True: 
+        X = 2*rand(100) - 1
+        Y = 2*rand(100) - 1
+    else:
+        X, Y = np.meshgrid(np.linspace(-1, 1, 50), 
+                           np.linspace(-1, 1, 50))
+                           
+    Z = generate(X, Y, 0.0)
+          
     # now predict the z component from the xs,ys,zs
     mean, var = gp_chol(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=0.01)
-
-    fig = plt.figure()
-
-    #ax = fig.add_subplot(111, projection='3d')
-    ax = Axes3D(fig)
     
-    scene = ax.scatter(xs, ys, zs, c='r')
-    
-    #predicted = ax.plot_surface(X, Y, mean.reshape(X.shape), linewidth=0, cmap=cm.hot, alpha=0.5)
-    predicted = ax.plot_wireframe(X, Y, mean.reshape(X.shape), color='g')
+    print 
 
-    xs = np.linspace(-1, 1, 50)
-    ys = np.linspace(-1, 1, 50)
-    X, Y = np.meshgrid(xs, ys)
-    Z = generate(X, Y, 0.0)
+    plotIt = False
+    if plotIt == True:
+        fig = plt.figure()
 
-    wframe = ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1)
-    
-    ax.set_xlim3d(-1, 1)
-    ax.set_ylim3d(-1, 1)
-    ax.set_zlim3d(-1, 1)
-    
-    plt.show()
+        #ax = fig.add_subplot(111, projection='3d')
+        ax = Axes3D(fig)
+        
+        scene = ax.scatter(xs, ys, zs, c='r')
+        
+        #predicted = ax.plot_surface(X, Y, mean.reshape(X.shape), linewidth=0, cmap=cm.hot, alpha=0.5)
+        predicted = ax.plot_wireframe(X, Y, mean.reshape(X.shape), color='g')
+
+        xs = np.linspace(-1, 1, 50)
+        ys = np.linspace(-1, 1, 50)
+        X, Y = np.meshgrid(xs, ys)
+        Z = generate(X, Y, 0.0)
+
+        wframe = ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1)
+        
+        ax.set_xlim3d(-1, 1)
+        ax.set_ylim3d(-1, 1)
+        ax.set_zlim3d(-1, 1)
+        
+        plt.show()
     
     
     
 if __name__ == '__main__':
-    case1D()
-    #case2D()
+    #case1D()
+    case2D()
 
 
