@@ -17,7 +17,7 @@ def gp_simple(X,y,pts,sigma=0.01):
     
     alpha = dot(Kstar.T, inv(K + (sigma**2)*eye(K.shape[0])))
     mean = dot(alpha,y)
-    var = ones_like(mean) - diag(dot(alpha, Kstar)) + sigma**2
+    var = getK(pts,pts) - dot(alpha, Kstar) + sigma**2
     return mean, var
     
 def gp_chol(X,y,pts,sigma=0.01):
@@ -27,7 +27,7 @@ def gp_chol(X,y,pts,sigma=0.01):
     alpha = solve(L.T,solve(L,y))
     mean = dot(Kstar.T, alpha)
     v = solve(L,Kstar)
-    var = ones_like(mean) - diag(dot(v.T,v)) + sigma**2
+    var = getK(pts,pts) - dot(v.T,v) + sigma**2
     return mean, var
 
 def case1D():
@@ -53,15 +53,15 @@ def case1D():
     mean1, var1 = gp_simple(X, y, x, sigma)
     #print time.time() - st; st = time.time()
     #mean2, var2 = gp_chol(X, y, x, sigma)
-    #print time.time() - st; st = time.time()
+    #print time.time() - st
 
     fig = pl.figure()
     pl.plot(x, _f(x), 'r:', label=u'$f(x) = x\,\sin(x)$')
     pl.errorbar(X.ravel(), y, dy, fmt='r.', markersize=10, label=u'Observations')
     pl.plot(x, mean1, 'b-', label=u'Prediction')
     pl.fill(np.concatenate([x, x[::-1]]), \
-            np.concatenate([mean1 - 1.9600 * var1,
-                           (mean1 + 1.9600 * var1)[::-1]]), \
+            np.concatenate([mean1 - 1.9600 * diag(var1),
+                           (mean1 + 1.9600 * diag(var1))[::-1]]), \
             alpha=.5, fc='b', ec='None', label='95% confidence interval')
     pl.xlabel('$x$')
     pl.ylabel('$f(x)$')
@@ -114,16 +114,16 @@ def case2D():
 
     wframe = ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1)
     
-    #errbars = ax.plot([0,0],[0,0],[-.5,.5])
-    
     ax.set_xlim3d(-1, 1)
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
     
     plt.show()
     
+    
+    
 if __name__ == '__main__':
-    #case1D()
-    case2D()
+    case1D()
+    #case2D()
 
-# test
+
