@@ -1,6 +1,6 @@
 from __future__ import division
 from numpy import *
-from numpy.linalg import norm, inv, cholesky, solve
+from numpy.linalg import norm, inv, cholesky, solve, det
 from numpy.random import randn, rand
 import time
             
@@ -17,7 +17,7 @@ def gp_simple(X,y,pts,sigma=0.1):
     
     alpha = dot(Kstar.T, inv(K + (sigma**2)*eye(K.shape[0])))
     mean = dot(alpha,y)
-    var = getK(pts,pts) - dot(alpha, Kstar) #+ sigma**2
+    var = getK(pts,pts) - dot(alpha, Kstar) + (sigma**2)*eye(mean.shape[0])
     return mean, var
     
 def gp_chol(X,y,pts,sigma=0.1):
@@ -31,21 +31,40 @@ def gp_chol(X,y,pts,sigma=0.1):
     return mean, var
     
 def shuffleIt(c):
+    ''' this fixes the indices from the output of meshgrid so the covariance
+        plots can be easier to interpret '''
     d = zeros_like(c)
-    for i in range(100):
-        cc = c[i,:100].reshape((10,10))
-        ii = i//10
-        jj = i%10
-        d[ii*10:ii*10+10,jj*10:jj*10+10] = cc
+    sq_c = sqrt(c.shape[0])
+    for i in range(c.shape[0]):
+        cc = c[i,:].reshape((sq_c,sq_c))
+        ii = i//sq_c
+        jj = i%sq_c
+        d[ii*sq_c:ii*sq_c+sq_c,jj*sq_c:jj*sq_c+sq_c] = cc
     return d
 
-def getLogL(mean, cov, ptsY):
+def getLogL_chol(mean, cov, ptsY):
+    ''' instead of calculating the determinant of the covariance matrix
+        directly, which is numerical unstable, I am summing the log of the 
+        diagonal of the cholesky factorization. I got this idea of chaper 2,
+        algorithm 2.1 of the GP book '''
     D = mean.shape[0]
     L = cholesky(cov)
 
     deltMean = ptsY - mean
     LL = sum(log(diag(L)))
     LL += .5*dot(deltMean.T,solve(L.T,solve(L,deltMean)))
+    LL += D/2.0*log(2*3.1415926535)
+    return LL
+    
+def getLogL_simple(mean, cov, ptsY):
+    ''' Don't use this one: the determinant of the cov 
+          matrix is going to zero and blowing up the LL '''
+    D = mean.shape[0]
+    invCov = inv(cov)
+
+    deltMean = ptsY - mean
+    LL = .5*log(det(cov))
+    LL += .5*dot(deltMean.T, dot(invCov, deltMean))
     LL += D/2.0*log(2*3.1415926535)
     return LL
 
@@ -89,7 +108,7 @@ def case1D():
 
     pl.show()
     
-def case2D():
+def case2D(plotIt=True, randPoints=False):
     from mpl_toolkits.mplot3d import axes3d, Axes3D
     import matplotlib.pyplot as plt
     import numpy as np
@@ -101,12 +120,11 @@ def case2D():
         return np.cos(2 * np.pi * X + phi) * R      
         
     # pick a whole bunch of random points (x,y) and then generate z + noise
-    xs = 2*rand(500) - 1
-    ys = 2*rand(500) - 1
+    xs = 2*rand(1000) - 1
+    ys = 2*rand(1000) - 1
     zs = generate(xs, ys, 0.0)
    
-    # now pick some new test points 
-    randPoints = False  
+    # now pick some new test points  
     if randPoints == True: 
         X = 2*rand(100) - 1
         Y = 2*rand(100) - 1
@@ -117,15 +135,26 @@ def case2D():
     Z = generate(X, Y, 0.0)
           
     # now predict the z component from the xs,ys,zs
+    st = time.time()
     mean, var = gp_chol(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
-    
-    print getLogL(mean, var, Z.flatten())
-
-    plotIt = True
-    if plotIt == True:
-        fig = plt.figure()
+    print 'time chol:', time.time() - st; st = time.time()
+    #mean2, var2 = gp_simple(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
+    #print 'time simple:', time.time() - st
         
-        plt.imshow(shuffleIt(log(var)), interpolation='nearest') 
+    
+
+    if plotIt == True:    
+        fig = plt.figure()
+        plt.plot(linspace(-1,1,100), [getLogL_chol(mean, var, Z.flatten()+i) for i in linspace(-1,1,100)]) 
+        plt.title('Varying $t_z$ from -1 to 1')
+        plt.ylabel('Negative Log-Likelihood')
+        plt.xlabel('$t_z$')
+    
+        fig = plt.figure()
+
+        var_masked = var.copy()
+        var_masked[var <= 0] = 1e-10
+        plt.imshow(shuffleIt(log(var_masked)), interpolation='nearest') 
     
         fig = plt.figure()
 
