@@ -7,35 +7,45 @@ import time
 def getK(X,Xp, k1=1, k2=1):
     k = zeros((X.shape[0],Xp.shape[0]))
     for i, x in enumerate(X):
-        for j, y in enumerate(Xp):    
+        for j, y in enumerate(Xp):  
             k[i,j] = k1*exp(-.5*k2*(norm(x-y)**2))
     return k
     
-def gp_simple(X,y,pts,sigma=0.01):
+def gp_simple(X,y,pts,sigma=0.1):
     K = getK(X,X)
     Kstar = getK(X,pts)
     
     alpha = dot(Kstar.T, inv(K + (sigma**2)*eye(K.shape[0])))
     mean = dot(alpha,y)
-    var = getK(pts,pts) - dot(alpha, Kstar) + sigma**2
+    var = getK(pts,pts) - dot(alpha, Kstar) #+ sigma**2
     return mean, var
     
-def gp_chol(X,y,pts,sigma=0.01):
+def gp_chol(X,y,pts,sigma=0.1):
     K = getK(X,X)
     Kstar = getK(X,pts)
     L = cholesky(K + (sigma**2)*eye(K.shape[0]))
     alpha = solve(L.T,solve(L,y))
     mean = dot(Kstar.T, alpha)
     v = solve(L,Kstar)
-    var = getK(pts,pts) - dot(v.T,v) + sigma**2
+    var = getK(pts,pts) - dot(v.T,v) + (sigma**2)*eye(mean.shape[0])
     return mean, var
+    
+def shuffleIt(c):
+    d = zeros_like(c)
+    for i in range(100):
+        cc = c[i,:100].reshape((10,10))
+        ii = i//10
+        jj = i%10
+        d[ii*10:ii*10+10,jj*10:jj*10+10] = cc
+    return d
 
 def getLogL(mean, cov, ptsY):
     D = mean.shape[0]
-    invCov = inv(cov)
+    L = cholesky(cov)
+
     deltMean = ptsY - mean
-    LL = .5*log(linalg.det(cov)) 
-    LL += .5*dot(dot(deltMean.T, invCov), deltMean)) 
+    LL = sum(log(diag(L)))
+    LL += .5*dot(deltMean.T,solve(L.T,solve(L,deltMean)))
     LL += D/2.0*log(2*3.1415926535)
     return LL
 
@@ -88,32 +98,35 @@ def case2D():
 
     def generate(X, Y, phi):
         R = 1 - np.sqrt(X**2 + Y**2)
-        return np.cos(2 * np.pi * X + phi) * R
-        
+        return np.cos(2 * np.pi * X + phi) * R      
         
     # pick a whole bunch of random points (x,y) and then generate z + noise
-    xs = 2*rand(1000) - 1
-    ys = 2*rand(1000) - 1
+    xs = 2*rand(500) - 1
+    ys = 2*rand(500) - 1
     zs = generate(xs, ys, 0.0)
    
     # now pick some new test points 
-    randPoints = True  
+    randPoints = False  
     if randPoints == True: 
         X = 2*rand(100) - 1
         Y = 2*rand(100) - 1
     else:
-        X, Y = np.meshgrid(np.linspace(-1, 1, 50), 
-                           np.linspace(-1, 1, 50))
+        X, Y = np.meshgrid(np.linspace(-1, 1, 10), 
+                           np.linspace(-1, 1, 10))
                            
     Z = generate(X, Y, 0.0)
           
     # now predict the z component from the xs,ys,zs
-    mean, var = gp_chol(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=0.01)
+    mean, var = gp_chol(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
     
-    print 
+    print getLogL(mean, var, Z.flatten())
 
-    plotIt = False
+    plotIt = True
     if plotIt == True:
+        fig = plt.figure()
+        
+        plt.imshow(shuffleIt(log(var)), interpolation='nearest') 
+    
         fig = plt.figure()
 
         #ax = fig.add_subplot(111, projection='3d')
@@ -135,7 +148,7 @@ def case2D():
         ax.set_ylim3d(-1, 1)
         ax.set_zlim3d(-1, 1)
         
-        plt.show()
+    plt.show()
     
     
     
