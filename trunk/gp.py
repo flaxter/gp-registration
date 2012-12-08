@@ -15,7 +15,26 @@ def getK_slow(X, Xp, k1=1, k2=1):
 def getK(X, Xp, k1=1, k2=1):
     return k1*exp(-.5*k2*cdist(X, Xp)**2)
     
+def getDK(X, Xp, k1=1, k2=1):
+    '''dk1 = zeros((X.shape[0],Xp.shape[0]))
+    dk2 = zeros((X.shape[0],Xp.shape[0]))
+    for i, x in enumerate(X):
+        for j, y in enumerate(Xp):  
+            dk1[i,j] = -k2*(x[0]-y[0])*k1*exp(-.5*k2*(norm(x-y)**2))
+            dk2[i,j] = -k2*(x[1]-y[1])*k1*exp(-.5*k2*(norm(x-y)**2))'''
+            
+    # reeeallly subtle broadcasting here
+    dk1 =  (-X[:,0]*k1*exp(-.5*k2*cdist(X, Xp).T**2)).T 
+    dk1 +=  Xp[:,0]*k1*exp(-.5*k2*cdist(X, Xp)**2)
+    
+    dk2 =  (-X[:,1]*k1*exp(-.5*k2*cdist(X, Xp).T**2)).T 
+    dk2 +=  Xp[:,1]*k1*exp(-.5*k2*cdist(X, Xp)**2)
+    
+    return dk1, dk2    
+    
 def gp_simple(X,y,pts,sigma=0.1):
+    ''' don't use this one. it is for simple testing purposes on small data
+    '''
     K = getK(X,X)
     Kstar = getK(X,pts)
     
@@ -25,16 +44,94 @@ def gp_simple(X,y,pts,sigma=0.1):
     return mean, var
     
 def gp_chol(X,y,pts,sigma=0.1):
-    K = getK(X,X)
 
-    Kstar = getK(X,pts)
-    
+    K = getK(X,X)
+    Kstar = getK(X,pts)   
+    Kstarstar = getK(pts,pts)
+
     L = cholesky(K + (sigma**2)*eye(K.shape[0]))
     alpha = solve(L.T,solve(L,y))
+ 
     mean = dot(Kstar.T, alpha)
-    v = solve(L,Kstar)
-    var = getK(pts,pts) - dot(v.T,v) + (sigma**2)*eye(mean.shape[0])
+    
+    v = solve(L,Kstar)   
+    var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(mean.shape[0])
+ 
     return mean, var
+    
+def gp_bootstrap(X,y,pts,sigma=0.1):
+    K = getK(X,X)
+    Kstarstar = getK(pts,pts)
+    L = cholesky(K + (sigma**2)*eye(K.shape[0]))
+    alpha = solve(L.T,solve(L,y))
+
+    return K, Kstarstar, L, alpha
+
+def gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1):
+    Kstar = getK(X,pts)    
+    mean = dot(Kstar.T, alpha)
+    
+    v = solve(L,Kstar)   
+    var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(mean.shape[0])
+ 
+    return mean, var
+    
+def gradientDescent(X,y,pts,z,sigma=0.1):
+
+    # these are constants in the calculations
+    K, Kstarstar, L, alpha = gp_bootstrap(X,y,pts,sigma) #.4 seconds
+    
+    #mean, var = gp(X,y,pts,K,Kstarstar,L,alpha) #.25 seconds
+    totalZ = 0
+    print 'Z offset (should go to 1)\t negative log likelihood (should be minimized)'
+    for i in range(20):
+        # we need to calculate the derivatives and move the (pts,z) around rigidly
+        Kstar = getK(X,pts)
+        v = solve(L,Kstar)
+        
+        mean = dot(Kstar.T, alpha)
+        var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(Kstarstar.shape[0])
+        Lvar = cholesky(var)
+        
+        dKstar1, dKstar2 = getDK(X, pts)
+        
+        # calculating derivative of the first term:
+        v_dKstar1 = solve(L, dKstar1) 
+        v_dKstar2 = solve(L, dKstar2)
+           
+        dCov = -2*dot(v.T, v_dKstar1)
+        Dx = solve(Lvar.T, solve(Lvar, dCov))
+        
+        dCov = -2*dot(v.T, v_dKstar2)
+        Dy = solve(Lvar.T, solve(Lvar, dCov))
+        
+        dx = trace(Dx)
+        dy = trace(Dy)
+        
+        # now the second term    
+        delt = z - mean
+        
+        dx -= 2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar1.T, alpha))))
+        dx -= 2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar2.T, alpha))))
+          
+        dx += dot(dot(delt.T, Dx), solve(Lvar, delt))
+        dy += dot(dot(delt.T, Dy), solve(Lvar, delt))
+        
+        Dz = ones((mean.shape[0],1))
+        
+        v1 = solve(Lvar, delt)
+        v2 = solve(Lvar, Dz)
+        
+        dz = 2*dot(v1.T, v2)[0]
+        
+        N = mean.shape[0]
+        stepX, stepY, stepZ = dx/(N*N), dy/(N*N), dz/(N*N)
+        
+        z -= 0.0005*stepZ
+        totalZ -= 0.0005*stepZ
+        print totalZ, '\t', getLogL_chol(mean, var, z)
+    
+        
     
 def shuffleIt(c):
     ''' this fixes the indices from the output of meshgrid so the covariance
@@ -73,6 +170,8 @@ def getLogL_simple(mean, cov, ptsY):
     LL += .5*dot(deltMean.T, dot(invCov, deltMean))
     LL += D/2.0*log(2*3.1415926535)
     return LL
+    
+
 
 def case1D():
     import pylab as pl
@@ -142,12 +241,17 @@ def case2D(plotIt=True, randPoints=False):
           
     # now predict the z component from the xs,ys,zs
     st = time.time()
+    
     mean, var = gp_chol(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
     print 'time chol:', time.time() - st; st = time.time()
     #mean2, var2 = gp_simple(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
     #print 'time simple:', time.time() - st
         
-    
+    gradientDescent(np.concatenate([[xs],[ys]]).T, 
+                    zs, 
+                    np.concatenate([[X.flatten()],[Y.flatten()]]).T, 
+                    Z.flatten()-1,
+                    sigma=.001)
 
     if plotIt == True:    
         fig = plt.figure()
