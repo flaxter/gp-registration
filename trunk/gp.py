@@ -22,7 +22,12 @@ def getDK(X, Xp, k1=1, k2=1):
         for j, y in enumerate(Xp):  
             dk1[i,j] = -k2*(x[0]-y[0])*k1*exp(-.5*k2*(norm(x-y)**2))
             dk2[i,j] = -k2*(x[1]-y[1])*k1*exp(-.5*k2*(norm(x-y)**2))'''
-            
+     
+    # is this equivalent?    
+    #K = k1*exp(-.5*k2*cdist(X, Xp)**2)
+    #dk1 = (-X[:,0]*K.T).T + Xp[:,0]*K
+    #dk2 = (-X[:,1]*K.T).T + Xp[:,1]*K
+    
     # reeeallly subtle broadcasting here
     dk1 =  (-X[:,0]*k1*exp(-.5*k2*cdist(X, Xp).T**2)).T 
     dk1 +=  Xp[:,0]*k1*exp(-.5*k2*cdist(X, Xp)**2)
@@ -81,55 +86,89 @@ def gradientDescent(X,y,pts,z,sigma=0.1):
     # these are constants in the calculations
     K, Kstarstar, L, alpha = gp_bootstrap(X,y,pts,sigma) #.4 seconds
     
-    #mean, var = gp(X,y,pts,K,Kstarstar,L,alpha) #.25 seconds
-    totalZ = 0
-    print 'Z offset (should go to 1)\t negative log likelihood (should be minimized)'
+    # K is K(X,X)
+    # Kstarstar is K(X',X')
+    # L is the lower triangular (K + sigma^2 I) matrix
+    # alpha is (K + sigma^2 I)^-1 * y    
+    
+    totalT = array([0.0,0.0,0.0])
+    print 'translation offset\t negative log likelihood (should be minimized)'
     for i in range(20):
         # we need to calculate the derivatives and move the (pts,z) around rigidly
+
+        ######################
+        # first term  
+        ######################        
+        
         Kstar = getK(X,pts)
-        v = solve(L,Kstar)
+        v = solve(L,Kstar) # L^-1 * Kstar
         
         mean = dot(Kstar.T, alpha)
+        
+        # v^T v = (L^-1 Kstar)^T (L^-1 Kstar) = kstar^T (K + sigma^2 I)^-1 kstar
         var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(Kstarstar.shape[0])
         Lvar = cholesky(var)
         
-        dKstar1, dKstar2 = getDK(X, pts)
+        # tensor split into two matrices
+        # the following calculations will come in pairs now
+        dKstar1, dKstar2 = getDK(X, pts) 
         
         # calculating derivative of the first term:
-        v_dKstar1 = solve(L, dKstar1) 
-        v_dKstar2 = solve(L, dKstar2)
+        v_dKstar1 = solve(L, dKstar1) # L^-1 dKstar1 (for x)
+        v_dKstar2 = solve(L, dKstar2) # L^-1 dKstar2 (for y)
            
-        dCov = -2*dot(v.T, v_dKstar1)
-        Dx = solve(Lvar.T, solve(Lvar, dCov))
+        # -2 * Kstar^T (K + sigma^2 I)^-1 dKstar1
+        dCov1 = -2*dot(v.T, v_dKstar1) # (for x)
+        dCov2 = -2*dot(v.T, v_dKstar2) # (for y)
         
-        dCov = -2*dot(v.T, v_dKstar2)
-        Dy = solve(Lvar.T, solve(Lvar, dCov))
+        # (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1)
+        Dx = solve(Lvar.T, solve(Lvar, dCov1)) 
+        Dy = solve(Lvar.T, solve(Lvar, dCov2))
         
-        dx = trace(Dx)
+        # as per Seth's equations, we take the trace of these bad boys
+        dx = trace(Dx) 
         dy = trace(Dy)
         
-        # now the second term    
+        ######################
+        # now the second term  
+        ######################
+          
+        # errors in z
         delt = z - mean
         
+        # a lot packed in here...
+        # -2 (z - mean)^T (var)^-1 dKstar^T (K + sigma^2 I)^-1 * y   
         dx -= 2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar1.T, alpha))))
-        dx -= 2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar2.T, alpha))))
+        dy -= 2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar2.T, alpha))))
           
-        dx += dot(dot(delt.T, Dx), solve(Lvar, delt))
-        dy += dot(dot(delt.T, Dy), solve(Lvar, delt))
+        # even more here...
+        # - (z - mean)^T (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1) (var)^-1 (z - mean)
+        dx -= dot(dot(delt.T, Dx), solve(Lvar.T, solve(Lvar, delt)))
+        dy -= dot(dot(delt.T, Dy), solve(Lvar.T, solve(Lvar, delt)))
         
+        # z is super easy...
         Dz = ones((mean.shape[0],1))
+        v1 = solve(Lvar, delt) # L^-1 (z - mean)
+        v2 = solve(Lvar, Dz)   # L^-1 (1's)
         
-        v1 = solve(Lvar, delt)
-        v2 = solve(Lvar, Dz)
-        
+        # (z - mean)^T (cov)^-1 1's 
+        # (the one's vector just sums it up)
         dz = 2*dot(v1.T, v2)[0]
         
         N = mean.shape[0]
         stepX, stepY, stepZ = dx/(N*N), dy/(N*N), dz/(N*N)
         
-        z -= 0.0005*stepZ
-        totalZ -= 0.0005*stepZ
-        print totalZ, '\t', getLogL_chol(mean, var, z)
+        z -= 0.0001*stepZ
+        
+        ### NOTE THAT i HAVE TURNED OFF UPDATES TO X UNTIL BUG IS FIXED
+        pts -= array([0.0000*stepX, 0.0001*stepY])
+ 
+        totalT += .0001*array([stepX, stepY, stepZ])
+        
+        #print stepX, stepY, stepZ
+        
+        mean, var = gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1)
+        print totalT, '\t', getLogL_chol(mean, var, z)
     
         
     
@@ -213,7 +252,7 @@ def case1D():
 
     pl.show()
     
-def case2D(plotIt=True, randPoints=False):
+def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5]):
     from mpl_toolkits.mplot3d import axes3d, Axes3D
     import matplotlib.pyplot as plt
     import numpy as np
@@ -247,10 +286,11 @@ def case2D(plotIt=True, randPoints=False):
     #mean2, var2 = gp_simple(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
     #print 'time simple:', time.time() - st
         
+    
     gradientDescent(np.concatenate([[xs],[ys]]).T, 
                     zs, 
-                    np.concatenate([[X.flatten()],[Y.flatten()]]).T, 
-                    Z.flatten()-1,
+                    np.concatenate([[X.flatten()+T_vector[0]],[Y.flatten()+T_vector[1]]]).T, 
+                    Z.flatten()+T_vector[2],
                     sigma=.001)
 
     if plotIt == True:    
@@ -293,6 +333,9 @@ def case2D(plotIt=True, randPoints=False):
     
 if __name__ == '__main__':
     #case1D()
-    case2D()
+    
+    T_vector = [.5,-.5,1.5]
+    print 'Translation', T_vector
+    case2D(plotIt=False, T_vector=T_vector)
 
 
