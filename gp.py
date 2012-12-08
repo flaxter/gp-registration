@@ -3,13 +3,17 @@ from numpy import *
 from numpy.linalg import norm, inv, cholesky, solve, det
 from numpy.random import randn, rand
 import time
+from scipy.spatial.distance import cdist
             
-def getK(X,Xp, k1=1, k2=1):
+def getK_slow(X, Xp, k1=1, k2=1):
     k = zeros((X.shape[0],Xp.shape[0]))
     for i, x in enumerate(X):
         for j, y in enumerate(Xp):  
             k[i,j] = k1*exp(-.5*k2*(norm(x-y)**2))
     return k
+    
+def getK(X, Xp, k1=1, k2=1):
+    return k1*exp(-.5*k2*cdist(X, Xp)**2)
     
 def gp_simple(X,y,pts,sigma=0.1):
     K = getK(X,X)
@@ -22,7 +26,9 @@ def gp_simple(X,y,pts,sigma=0.1):
     
 def gp_chol(X,y,pts,sigma=0.1):
     K = getK(X,X)
+
     Kstar = getK(X,pts)
+    
     L = cholesky(K + (sigma**2)*eye(K.shape[0]))
     alpha = solve(L.T,solve(L,y))
     mean = dot(Kstar.T, alpha)
@@ -129,8 +135,8 @@ def case2D(plotIt=True, randPoints=False):
         X = 2*rand(100) - 1
         Y = 2*rand(100) - 1
     else:
-        X, Y = np.meshgrid(np.linspace(-1, 1, 10), 
-                           np.linspace(-1, 1, 10))
+        X, Y = np.meshgrid(np.linspace(-1, 1, 20), 
+                           np.linspace(-1, 1, 20))
                            
     Z = generate(X, Y, 0.0)
           
