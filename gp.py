@@ -296,12 +296,6 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     #print 'time simple:', time.time() - st
         
     
-    gradientDescent(np.concatenate([[xs],[ys]]).T, 
-                    zs, 
-                    np.concatenate([[X.flatten()+T_vector[0]],[Y.flatten()+T_vector[1]]]).T, 
-                    Z.flatten()+T_vector[2],
-                    sigma=.001)
-
     if plotIt == True:    
         fig = plt.figure()
         plt.plot(linspace(-1,1,100), [getLogL_chol(mean, var, Z.flatten()+i) for i in linspace(-1,1,100)]) 
@@ -338,13 +332,17 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
         
         plt.show()
     
-    
+    return (np.concatenate([[xs],[ys]]).T, 
+                    zs, 
+                    np.concatenate([[X.flatten()+T_vector[0]],[Y.flatten()+T_vector[1]]]).T, 
+                    Z.flatten()+T_vector[2],
+                    .001)
     
 if __name__ == '__main__':
     #case1D()
     
     T_vector = [.1,-.1,-.2]
     print 'Translation', T_vector
-    case2D(plotIt=False, T_vector=T_vector, generate=generate_sym)
-
+    X,y,pts,z,sigma = case2D(randPoints=False, plotIt=False, T_vector=T_vector)
+    gradientDescent(X,y,pts,z,sigma)
 
