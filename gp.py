@@ -78,7 +78,7 @@ def gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1):
  
     return mean, var
     
-def gradientDescent(X,y,pts,z,sigma=0.1):
+def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2):
 
     # these are constants in the calculations
     K, Kstarstar, L, alpha = gp_bootstrap(X,y,pts,sigma) #.4 seconds
@@ -95,7 +95,8 @@ def gradientDescent(X,y,pts,z,sigma=0.1):
     
     totalT = array([0.0,0.0,0.0])
     totalQ = array([0.0,0.0,0.0,0.0])
-    print 'translation offset\t negative log likelihood (should be minimized)'
+    if verbose > 1:
+        print 'translation offset\t negative log likelihood (should be minimized)'
     for i in range(25):
         # we need to calculate the derivatives and move the (pts,z) around rigidly
 
@@ -171,8 +172,11 @@ def gradientDescent(X,y,pts,z,sigma=0.1):
         #print stepX, stepY, stepZ
         
         mean, var = gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1)
-        print totalT, '\t', getLogL_chol(mean, var, z)
+        if verbose > 1:
+            print totalT, '\t', getLogL_chol(mean, var, z)
     
+    if verbose > 0:
+        print totalT, '\t', getLogL_chol(mean, var, z)
         
     
 def shuffleIt(c):
@@ -265,7 +269,7 @@ def generate_sym(X, Y, phi):
     R = 1 - np.sqrt(X**2 + Y**2)
     return np.cos(2 * np.pi * X * Y + phi) * R 
     
-def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=generate):
+def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=generate, n1 = 1000, n2=100):
     from mpl_toolkits.mplot3d import axes3d, Axes3D
     import matplotlib.pyplot as plt
     import numpy as np
@@ -273,14 +277,14 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     from matplotlib import cm
         
     # pick a whole bunch of random points (x,y) and then generate z + noise
-    xs = 2*rand(1000) - 1
-    ys = 2*rand(1000) - 1
+    xs = 2*rand(n1) - 1
+    ys = 2*rand(n1) - 1
     zs = generate(xs, ys, 0.0)
    
     # now pick some new test points  
     if randPoints == True: 
-        X = 2*rand(100) - 1
-        Y = 2*rand(100) - 1
+        X = 2*rand(n2) - 1
+        Y = 2*rand(n2) - 1
     else:
         X, Y = np.meshgrid(np.linspace(-1, 1, 20), 
                            np.linspace(-1, 1, 20))
