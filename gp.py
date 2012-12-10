@@ -254,17 +254,23 @@ def case1D():
     pl.legend(loc='upper left')
 
     pl.show()
+
+def generate(X, Y, phi):
+    import numpy as np
+    R = 1 - np.sqrt(X**2 + Y**2)
+    return np.cos(2 * np.pi * X + phi) * R + Y*Y 
+
+def generate_sym(X, Y, phi):
+    import numpy as np
+    R = 1 - np.sqrt(X**2 + Y**2)
+    return np.cos(2 * np.pi * X * Y + phi) * R 
     
-def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5]):
+def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=generate):
     from mpl_toolkits.mplot3d import axes3d, Axes3D
     import matplotlib.pyplot as plt
     import numpy as np
     import time
     from matplotlib import cm
-
-    def generate(X, Y, phi):
-        R = 1 - np.sqrt(X**2 + Y**2)
-        return np.cos(2 * np.pi * X + phi) * R + Y*Y 
         
     # pick a whole bunch of random points (x,y) and then generate z + noise
     xs = 2*rand(1000) - 1
@@ -330,7 +336,7 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5]):
         ax.set_ylim3d(-1, 1)
         ax.set_zlim3d(-1, 1)
         
-    plt.show()
+        plt.show()
     
     
     
@@ -339,6 +345,6 @@ if __name__ == '__main__':
     
     T_vector = [.1,-.1,-.2]
     print 'Translation', T_vector
-    case2D(plotIt=False, T_vector=T_vector)
+    case2D(plotIt=False, T_vector=T_vector, generate=generate_sym)
 
 
