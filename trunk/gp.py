@@ -78,7 +78,7 @@ def gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1):
  
     return mean, var
     
-def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2):
+def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=25):
 
     # these are constants in the calculations
     K, Kstarstar, L, alpha = gp_bootstrap(X,y,pts,sigma) #.4 seconds
@@ -97,7 +97,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2):
     totalQ = array([0.0,0.0,0.0,0.0])
     if verbose > 1:
         print 'translation offset\t negative log likelihood (should be minimized)'
-    for i in range(25):
+    for i in range(iterations):
         # we need to calculate the derivatives and move the (pts,z) around rigidly
 
         ######################
@@ -174,9 +174,13 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2):
         mean, var = gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1)
         if verbose > 1:
             print totalT, '\t', getLogL_chol(mean, var, z)
-    
+
+    likelihood = getLogL_chol(mean, var, z)
     if verbose > 0:
-        print totalT, '\t', getLogL_chol(mean, var, z)
+        print totalT, '\t', likelihood
+
+    return(totalT, likelihood)
+
         
     
 def shuffleIt(c):
@@ -286,8 +290,8 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
         X = 2*rand(n2) - 1
         Y = 2*rand(n2) - 1
     else:
-        X, Y = np.meshgrid(np.linspace(-1, 1, 20), 
-                           np.linspace(-1, 1, 20))
+        X, Y = np.meshgrid(np.linspace(-1, 1, n2), 
+                           np.linspace(-1, 1, n2))
                            
     Z = generate(X, Y, 0.0)
           
@@ -295,7 +299,7 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     st = time.time()
     
     mean, var = gp_chol(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
-    print 'time chol:', time.time() - st; st = time.time()
+    #print 'time chol:', time.time() - st; st = time.time()
     #mean2, var2 = gp_simple(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
     #print 'time simple:', time.time() - st
         
