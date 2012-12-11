@@ -43,7 +43,7 @@ def multQ(q,p):
                    a1*c2-b1*d2+c1*a2+d1*b2,
                    a1*b2+b1*a2+c1*d2-d1*c2])
                   
-def normalize(q):
+def normalizeQ(q):
     return q/sqrt(dot(q,q))             
                   
 def transformPts(pts, rot=[5,-5,5], trans=[0.1,-.1,.1]):  
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     ax.scatter(pts[:,0], pts[:,1], pts[:,2], c='g')
        
-    pts2, q, t = transformPts(pts, [40,40,40], [2.5,2.5,2.5])
+    pts2 = transformPtsQ(pts, array([1,0,0,0]), [2.5,2.5,2.5])
     
     ax.scatter(pts2[:,0], pts2[:,1], pts2[:,2], c='b')
 
