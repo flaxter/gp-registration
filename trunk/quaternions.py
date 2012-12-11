@@ -3,7 +3,7 @@ import vectors
 from vectors import M, Q
                   
 def rotQ(q):
-    u, v, w, s = q
+    s, u, v, w = q
 
     return array([[s*s+u*u-v*v-w*w, 2*(u*v-s*w), 2*(u*w+s*v)],
                   [2*(u*v+s*w), s*s-u*u+v*v-w*w, 2*(v*w-s*u)],
@@ -15,23 +15,25 @@ def skew(x):
                   [ x[1],   -x[0],     0]])
 
 def dRotate(q, x, y, z):
-    u, v, w, s = q
-    ds = [  u*x + v*y + w*z , 
-            v*x - u*y - s*z , 
-            w*x + s*y - u*z ]
+    s, u, v, w = q
+    du = 2*array([  u*x + v*y + w*z , 
+                    v*x - u*y - s*z , 
+                    w*x + s*y - u*z ])
                            
-    du = [ -v*x + u*y + s*z , 
-            u*x + v*y + w*z , 
-           -s*x + w*y - v*z ] 
+    dv = 2*array([ -v*x + u*y + s*z , 
+                    u*x + v*y + w*z , 
+                   -s*x + w*y - v*z ])
                            
-    dv = [ -w*x - s*y + u*z ,  
-            s*x - w*y + v*z ,  
-            u*x + v*y + w*z ]
+    dw = 2*array([ -w*x - s*y + u*z ,  
+                    s*x - w*y + v*z ,  
+                    u*x + v*y + w*z ])
                            
-    dw = [  s*x - w*y + v*z ,
-            w*x + s*y - u*z ,
-           -v*x + u*y + s*z ]
-    return ds, du, dv, dw     
+    ds = 2*array([  s*x - w*y + v*z ,
+                    w*x + s*y - u*z ,
+                   -v*x + u*y + s*z ])
+           
+    # so ds is a three vector that represents dx/ds, dy/ds, dz/ds
+    return array(ds).T, array(du).T, array(dv).T, array(dw).T     
     
 def multQ(q,p):
     a1, b1, c1, d1 = q
@@ -45,13 +47,45 @@ def normalize(q):
     return q/sqrt(dot(q,q))             
                   
 def transformPts(pts, rot=[5,-5,5], trans=[0.1,-.1,.1]):  
-    qReal = Q.rotate('X', vectors.radians(rot[0]))* \
+    qReal = Q.rotate('Z', vectors.radians(rot[2]))* \
             Q.rotate('Y', vectors.radians(rot[1]))* \
-            Q.rotate('Z', vectors.radians(rot[2]))
+            Q.rotate('X', vectors.radians(rot[0]))
+    u, v, w, s = qReal
+    qReal = array([s, u, v, w])
     tReal = array(trans)
     
     # transform sample by the unknown R, t
-    pts = dot(rotQ(qReal), pts.T).T + tReal
+    pts2 = dot(rotQ(qReal), pts.T).T + tReal
+    return pts2, tReal, qReal
 
-    return pts, tReal, qReal
+def transformPtsQ(pts, q, t):  
+    # transform sample by the unknown R, t
+    t = array(t)
+    pts2 = dot(rotQ(q), pts.T).T + t
+    return pts2
+    
+if __name__ == '__main__':
+    from numpy.random import randn
+    from mpl_toolkits.mplot3d import axes3d, Axes3D
+    import matplotlib.pyplot as plt
+    
+    pts = randn(3*200).reshape((200,3))
+    
+    fig = plt.figure()
 
+    #ax = fig.add_subplot(111, projection='3d')
+    ax = Axes3D(fig)
+
+    ax.scatter(pts[:,0], pts[:,1], pts[:,2], c='g')
+       
+    pts2, q, t = transformPts(pts, [40,40,40], [2.5,2.5,2.5])
+    
+    ax.scatter(pts2[:,0], pts2[:,1], pts2[:,2], c='b')
+
+    #ax.set_xlim3d(-1, 1)
+    #ax.set_ylim3d(-1, 1)
+    #ax.set_zlim3d(-1, 1)
+
+    plt.show()
+    
+    
