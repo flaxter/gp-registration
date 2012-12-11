@@ -106,7 +106,6 @@ def gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1):
     return mean, var
     
 def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
-    import matplotlib.pyplot as plt
     # these are constants in the calculations
     K, Kstarstar, L, alpha = gp_bootstrap(X,y,pts,sigma) #.4 seconds
     
@@ -217,16 +216,16 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
         # (the one's vector just sums it up)
         dz = 2*dot(v1.T, v2)[0]
         
-        beta = 0.00005
+        beta = 0.0005
         N = mean.shape[0]
         
         if False: # backtracking line search
             LL = 2*LL_last 
             while LL > LL_last:
-                stepChange_t = beta#*sigma*sigma
-                stepChange_q = beta#*beta*sigma*sigma
-                stepX, stepY, stepZ = stepChange_t/(N*N)*array([dx, dy, dz])
-                stepQ = stepChange_q/(N*N)*array([ds, du, dv, dw]) 
+                stepChange_t = beta/N#*sigma*sigma
+                stepChange_q = beta/N#*beta*sigma*sigma
+                stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
+                stepQ = stepChange_q*array([ds, du, dv, dw]) 
                                 
                 # now we transform the Xnew by q and tx,ty,tz for the next iteration
                 Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - stepQ), 
@@ -240,10 +239,10 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
                 if beta < 1e-10: break
         
         else:
-            stepChange_t = beta#*sigma*sigma
-            stepChange_q = beta*beta#*sigma*sigma
-            stepX, stepY, stepZ = stepChange_t/(N*N)*array([dx, dy, dz])
-            stepQ = stepChange_q/(N*N)*array([ds, du, dv, dw]) 
+            stepChange_t = beta/N#*sigma*sigma
+            stepChange_q = beta/N#*sigma*sigma
+            stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
+            stepQ = stepChange_q*array([ds, du, dv, dw]) 
             
             tx -= stepX
             ty -= stepY
@@ -262,7 +261,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
                                  q[0], q[1], q[2], q[3], 
                                  LL)
                                  
-        if abs((LL-LL_last)/LL_last) < 1e-5: break
+        if abs((LL-LL_last)/LL_last) < 1e-5 or LL-LL_last > 0: break
         
         LL_last = LL
             
@@ -445,18 +444,20 @@ if __name__ == '__main__':
     
     sigma = 0.1
     
-    T_vector = [0.1,0.0,0.0]
-    qReal = Q.rotate('Z', vectors.radians(0))
+    T_vector = [0.0,0.0,0.0]
+    qReal = Q.rotate('Z', vectors.radians(-15))
     u, v, w, s = qReal
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
     X,y,pts,z = case2D(randPoints=True, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=20, n2=25, 
+                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
                        sigma=sigma)
     
-    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200)
-    print 'Translation', T_vector
-    print rotQ(qReal)
-    print 'calculated t', -dot(inv(rotQ(q)),t)
-    print inv(rotQ(q))
+    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250)
+    print 'Real Translation', around(T_vector, decimals=2)
+    print 'Real Rotation'
+    print around(rotQ(qReal), decimals=2)
+    print 'Calculated t', around(-dot(inv(rotQ(q)),t), decimals=2)
+    print 'Calculated R'
+    print around(linalg.inv(rotQ(q)), decimals=2)
