@@ -1,7 +1,7 @@
 from numpy.random import randn, rand
 from quaternions import transformPts
 
-from gp import generate, getLogL_chol, shuffleIt, gp, gp_bootstrap
+from gp import generate, getLogL_chol, shuffleIt, gp, gp_bootstrap, case2D, gradientDescent
 
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 import matplotlib.pyplot as plt
@@ -72,6 +72,30 @@ def LLsurface_plot(randPoints=True, n1=100, n2=100, generate=generate, sigma=0.0
     ax3.scatter(Xs,Ys,Zs, c='b', s=25)
     
     plt.show()
+    
+def animPoints():
+    sigma = 0.1
+
+    T_vector = [.075,-.02,.03]
+    qReal = Q.rotate('Z', vectors.radians(-5))
+    u, v, w, s = qReal
+    qReal = array([s, u, v, w])
+    print qReal
+    print 'Translation', T_vector
+    X,y,pts,z = case2D(randPoints=True, plotIt=False, 
+                       T_vector=T_vector, qReal=qReal, n1=100, n2=50, 
+                       sigma=sigma)
+
+    q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=100, beta=0.00005, returnTraj=True)
+    print 'Real Translation', around(T_vector, decimals=2)
+    print 'Real Rotation'
+    print around(rotQ(qReal), decimals=2)
+    print 'Calculated t', around(-dot(inv(rotQ(q)),t), decimals=2)
+    print 'Calculated R'
+    print around(linalg.inv(rotQ(q)), decimals=2)
+    
+    print Ts
 
 if __name__ == '__main__':
-    LLsurface_plot(n1=500, n2=25)
+    #LLsurface_plot(n1=500, n2=25)
+    animPoints()

@@ -34,7 +34,7 @@ def getDK(X, Xp, Xnew, q, k1=1, k2=1):
   
     return dk_x, dk_y, dk_s, dk_u, dk_v, dk_w # note that dk_z is zero!
     
-def getDKstarstar(Xp, Xnew, q, k1=1, k2=1):
+def getDKstarstar_slow(Xp, Xnew, q, k1=1, k2=1):
     # reeeallly subtle broadcasting here
     # in matlab I would do a diag(X)*K*diag(Y) sort of thing
     K = k1*exp(-.5*k2*cdist(Xp, Xp)**2)
@@ -52,13 +52,37 @@ def getDKstarstar(Xp, Xnew, q, k1=1, k2=1):
             dk_u[i,j] = K[i,j]*dot((Xp[i,:] - Xp[j,:]).T,du[i,:2] - du[j,:2])
             dk_v[i,j] = K[i,j]*dot((Xp[i,:] - Xp[j,:]).T,dv[i,:2] - dv[j,:2])
             dk_w[i,j] = K[i,j]*dot((Xp[i,:] - Xp[j,:]).T,dw[i,:2] - dw[j,:2])
-    
-    #dk_s = ((-Xp[:,0]*K.T).T + Xp[:,0]*K)*ds[:,0] + ((-Xp[:,1]*K.T).T + Xp[:,1]*K)*ds[:,1]
-    #dk_u = ((-Xp[:,0]*K.T).T + Xp[:,0]*K)*du[:,0] + ((-Xp[:,1]*K.T).T + Xp[:,1]*K)*du[:,1]
-    #dk_v = ((-Xp[:,0]*K.T).T + Xp[:,0]*K)*dv[:,0] + ((-Xp[:,1]*K.T).T + Xp[:,1]*K)*dv[:,1]
-    #dk_w = ((-Xp[:,0]*K.T).T + Xp[:,0]*K)*dw[:,0] + ((-Xp[:,1]*K.T).T + Xp[:,1]*K)*dw[:,1]
   
     # note that dk_x, dk_y, and dk_z are zero!
+    return dk_s, dk_u, dk_v, dk_w 
+    
+def getDKstarstar(Xp, Xnew, q, k1=1, k2=1):
+    # reeeallly subtle broadcasting here
+    # in matlab I would do a diag(X)*K*diag(Y) sort of thing
+    K = k1*exp(-.5*k2*cdist(Xp, Xp, 'sqeuclidean'))
+    
+    ds, du, dv, dw = dRotate(q, Xnew[:,0], Xnew[:,1], Xnew[:,2])
+          
+    ds_diff_x = cdist(ds, ds, lambda u, v: u[0]-v[0])
+    ds_diff_y = cdist(ds, ds, lambda u, v: u[1]-v[1])
+    
+    du_diff_x = cdist(du, du, lambda u, v: u[0]-v[0])
+    du_diff_y = cdist(du, du, lambda u, v: u[1]-v[1])
+    
+    dv_diff_x = cdist(dv, dv, lambda u, v: u[0]-v[0])
+    dv_diff_y = cdist(dv, dv, lambda u, v: u[1]-v[1])
+    
+    dw_diff_x = cdist(dw, dw, lambda u, v: u[0]-v[0])
+    dw_diff_y = cdist(dw, dw, lambda u, v: u[1]-v[1])
+
+    Xp_diff_x = cdist(Xp, Xp, lambda u, v: u[0]-v[0])
+    Xp_diff_y = cdist(Xp, Xp, lambda u, v: u[1]-v[1])
+    
+    dk_s = K*(ds_diff_x*Xp_diff_x + ds_diff_y*Xp_diff_y)    
+    dk_u = K*(du_diff_x*Xp_diff_x + du_diff_y*Xp_diff_y)
+    dk_v = K*(dv_diff_x*Xp_diff_x + dv_diff_y*Xp_diff_y)
+    dk_w = K*(dw_diff_x*Xp_diff_x + dw_diff_y*Xp_diff_y) 
+
     return dk_s, dk_u, dk_v, dk_w 
     
 def gp_simple(X,y,pts,sigma=0.1):
@@ -105,7 +129,7 @@ def gp(X, y, pts, K, L, alpha, sigma=0.1):
  
     return mean, var
     
-def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
+def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, returnTraj=False):
     print X.shape
     print y.shape
     print pts.shape
@@ -128,7 +152,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
     Xnew = concatenate((pts, atleast_2d(z).T), axis=1)
     Ts=[]
 
-#    tx, ty, tz = concatenate([X,y],1).mean(axis=0)-concatenate([pts,z],1).mean(axis=0)
+    #tx, ty, tz = concatenate([X,y],1).mean(axis=0)-concatenate([pts,z],1).mean(axis=0)
     tx,ty,tz=0.0,0.0,0.0
     q = array([1.0,0.0,0.0,0.0])
 
@@ -136,7 +160,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
 
     LL_last = 99e9
 
-    plotSteps=True
+    plotSteps=False
     if plotSteps:
         from mpl_toolkits.mplot3d import axes3d, Axes3D
         import matplotlib.pyplot as pl
@@ -263,16 +287,16 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
                 mean, var = gp_chol(X, y, pts, sigma=sigma)
                 return getLogL_chol(mean, var, z)
 
-	        sqLength = norm(array([dx,dy,dz]))**2 + norm(array([ds,du,dv,dw]))**2
-	        LL_last = calculate_likelihood(0)
+                sqLength = norm(array([dx,dy,dz]))**2 + norm(array([ds,du,dv,dw]))**2
+                LL_last = calculate_likelihood(0)
             #import code; code.interact(local=locals())
-	        stepsize = 1
+                stepsize = 1
             while calculate_likelihood(stepsize) > (LL_last - .5 * stepsize * beta / N * sqLength) and stepsize > 1e-2:
                 stepsize *= 0.8
                 #print calculate_likelihood(stepsize), (LL_last - .5 * stepsize * beta / N * sqLength), stepsize
 
-	        beta = beta * stepsize
-	        print "beta", beta
+                beta = beta * stepsize
+                print "beta", beta
         
         stepChange_t = beta/N#*sigma*sigma
         stepChange_q = beta * beta / N #stepChange_t ** 2 #beta/N#*sigma*sigma
@@ -283,6 +307,8 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
         ty -= stepY
         tz -= stepZ
         q = normalizeQ(q - stepQ) 
+        
+        Ts.append([tx, ty, tz, q])
         
         # now we transform the Xnew by q and tx,ty,tz for the next iteration
         Xnew_transformed = transformPtsQ(Xnew, q, array([tx,ty,tz]))
@@ -300,13 +326,13 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
             ax.plot(X[:,0],X[:,1],y,'g.')
             ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'b.')
             ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
-#            pl.draw()
+            #pl.draw()
 
-	if abs((LL-LL_last)/LL_last) < 1e-5: 
-	    break # or LL-LL_last > 0: break
-        
-    LL_last = LL
+        if abs((LL-LL_last)/LL_last) < 1e-5: 
+            break # or LL-LL_last > 0: break
             
+        LL_last = LL
+                
 
     likelihood = getLogL_chol(mean, var, z)
     if verbose > 0:
@@ -328,9 +354,13 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
             ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
             pl.draw()
             import time
-            time.sleep(0.1)
+            time.sleep(0.01)
         time.sleep(10)
-    return q, [tx, ty, tz], likelihood 
+        
+    if returnTraj:
+        return q, [tx, ty, tz], likelihood, Ts
+    else:    
+        return q, [tx, ty, tz], likelihood 
 
         
     
@@ -425,7 +455,7 @@ def generate_sym(X, Y, phi=0):
     return np.cos(2 * np.pi * X * Y + phi) * R 
     
 def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=generate, n1 = 1000, n2=100,
-           qReal=array([1.0,0.0,0.0,0.0]), sigma=0.1):
+           qReal=array([1.0,0.0,0.0,0.0]), sigma=0.1, randPointsScene=True):
     from mpl_toolkits.mplot3d import axes3d, Axes3D
     import matplotlib.pyplot as plt
     import numpy as np
@@ -433,9 +463,14 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     from matplotlib import cm
         
     # pick a whole bunch of random points (x,y) and then generate z + noise
-    xs = 2*rand(n1) - 1
-    ys = 2*rand(n1) - 1
-    zs = generate(xs, ys, 0.0)
+    if randPointsScene:
+        xs = 2*rand(n1) - 1
+        ys = 2*rand(n1) - 1
+        zs = generate(xs, ys, 0.0)
+    else:
+        xs, ys = np.meshgrid(np.linspace(-1, 1, sqrt(n1)), 
+                             np.linspace(-1, 1, sqrt(n1)))
+        zs = generate(xs, ys, 0.0)
    
     # now pick some new test points  
     if randPoints == True: 
@@ -450,7 +485,8 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     # now predict the z component from the xs,ys,zs
     st = time.time()
     
-    mean, var = gp_chol(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
+    mean, var = gp_chol(np.concatenate([[xs.flatten()],[ys.flatten()]]).T, zs.flatten(), 
+                        np.concatenate([[X.flatten() ],[Y.flatten() ]]).T, sigma=.001)
     #print 'time chol:', time.time() - st; st = time.time()
     #mean2, var2 = gp_simple(np.concatenate([[xs],[ys]]).T, zs, np.concatenate([[X.flatten()],[Y.flatten()]]).T, sigma=.001)
     #print 'time simple:', time.time() - st
@@ -494,21 +530,21 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     
     XYZ = np.concatenate([[X.flatten()],[Y.flatten()],[Z.flatten()]]).T
     XYZ_transformed = transformPtsQ(XYZ, qReal, T_vector)
-    return (np.concatenate([[xs],[ys]]).T, zs, 
+    return (np.concatenate([[xs.flatten()],[ys.flatten()]]).T, zs.flatten(), 
             XYZ_transformed[:,:2],
             XYZ_transformed[:,2])
 
 def test():
     sigma = 0.1
 
-    T_vector = [.75,-.2,.3]
-    qReal = Q.rotate('Z', vectors.radians(-5))
+    T_vector = [0,0.2,-.5] #.075,-.02,.03]
+    qReal = Q.rotate('Z', vectors.radians(15)) #-5))
     u, v, w, s = qReal
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
-    X,y,pts,z = case2D(randPoints=True, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=1000, n2=200, 
+    X,y,pts,z = case2D(randPoints=False, randPointsScene=False, plotIt=False, 
+                       T_vector=T_vector, qReal=qReal, n1=100, n2=100, 
                        sigma=sigma)
 #    X2,y2,pts2,z2 = case2D(randPoints=True, plotIt=False, 
 #                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
@@ -521,7 +557,7 @@ def test():
 
     #print X,y,pts,z
     #exit()
-    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250, beta=0.005)
+    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=100, beta=0.005)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)
