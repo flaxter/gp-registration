@@ -39,8 +39,8 @@ def LLsurface_plot(randPoints=True, n1=100, n2=100, generate=generate, sigma=0.0
                            
     Z = generate(X, Y)
     
-    ty_lst = np.linspace(-2,2,50)
-    rotZ_lst = np.linspace(-20,20,50)
+    ty_lst = np.linspace(-1,1,50)
+    rotZ_lst = np.linspace(-90,90,50)
     
     LLmap = np.zeros((ty_lst.shape[0],rotZ_lst.shape[0]))
     
@@ -66,20 +66,43 @@ def LLsurface_plot(randPoints=True, n1=100, n2=100, generate=generate, sigma=0.0
     fig = plt.figure()
     ax = Axes3D(fig)
     plotX, plotY = np.meshgrid(ty_lst,rotZ_lst)
-    ax.plot_wireframe(plotX, plotY, LLmap) #, linewidth=0, , alpha=0.5), cmap=cm.hot
+    #ax.plot_wireframe(plotX, plotY, LLmap) #, linewidth=0, , alpha=0.5), cmap=cm.hot
+    ax.plot_surface(plotX, plotY, LLmap, linewidth=0.5, cmap=cm.Blues, rstride=1, cstride=1, alpha=0.3)
+    
+    cset = ax.contour(plotX, plotY, LLmap, zdir='z', offset=0, cmap=cm.coolwarm)
+    #cset = ax.contour(plotX, plotY, LLmap, zdir='x', offset=-1, cmap=cm.coolwarm)
+    #cset = ax.contour(plotX, plotY, LLmap, zdir='y', offset=90, cmap=cm.coolwarm)
+
+    ax.set_xlabel('$t_y$')
+    ax.set_xlim(-1, 1)
+    ax.set_ylabel('Rotation around $z$-axis (degrees)')
+    ax.set_ylim(-90, 90)
+    ax.set_zlabel('Negative Log-Likelihood')
+    ax.set_zlim(0, 5e6)
     
     fig2 = plt.figure()    
     ax2 = Axes3D(fig2)
-    ax2.plot_surface(plotX, plotY, LLmap, linewidth=0, cmap=cm.hot, rstride=2, cstride=2)
+    ax2.plot_surface(plotX, plotY, LLmap, linewidth=0.5, cmap=cm.hot, rstride=1, cstride=1, alpha=0.3)
+    
+    cset = ax2.contour(plotX, plotY, LLmap, zdir='z', offset=0, cmap=cm.coolwarm)
+    #cset = ax2.contour(plotX, plotY, LLmap, zdir='x', offset=-1, cmap=cm.coolwarm)
+    #cset = ax2.contour(plotX, plotY, LLmap, zdir='y', offset=90, cmap=cm.coolwarm)
 
-    fig3 = plt.figure()
+    ax2.set_xlabel('$t_y$')
+    ax2.set_xlim(-1, 1)
+    ax2.set_ylabel('Rotation around z-axis (degrees)')
+    ax2.set_ylim(-90, 90)
+    ax2.set_zlabel('Negative Log-Likelihood')
+    ax2.set_zlim(0, 5e6)
+
+    '''fig3 = plt.figure()
     ax3 = Axes3D(fig3)
     Xp, Yp = np.meshgrid(np.linspace(-1, 1, 50), 
                          np.linspace(-1, 1, 50))   
     Zp = generate(Xp, Yp)
-    ax3.plot_surface(Xp, Yp, Zp, alpha=0.75, linewidth=0, cmap=cm.hot, rstride=2, cstride=2)
+    ax3.plot_surface(Xp, Yp, Zp, alpha=0.75, linewidth=0, cmap=cm.hot, rstride=1, cstride=1)
     ax3.scatter(X,Y,Z, c='g', s=25)
-    ax3.scatter(Xs,Ys,Zs, c='b', s=25)
+    ax3.scatter(Xs,Ys,Zs, c='b', s=25)'''
     
     plt.show()
     
@@ -128,5 +151,5 @@ def animPoints():
     plt.show()
 
 if __name__ == '__main__':
-    #LLsurface_plot(n1=500, n2=25)
-    animPoints()
+    LLsurface_plot(n1=500, n2=25)
+    #animPoints()
