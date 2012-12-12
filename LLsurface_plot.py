@@ -16,8 +16,11 @@ from numpy import *
 
 from quaternions import rotQ
 
-def generate2(X, Y):
+def generate2(X, Y, phi=0):
     return X**2 + Y**2 
+    
+def generate3(X, Y, phi=0):
+    return abs(X) + abs(Y)
 
 def LLsurface_plot(randPoints=True, n1=100, n2=100, generate=generate, sigma=0.001):
 
@@ -84,24 +87,22 @@ def animPoints():
     sigma = 0.1
 
     T_vector = [.075,-.02,.03]
-    qReal = Q.rotate('Z', vectors.radians(-15))
+    qReal = Q.rotate('Z', vectors.radians(-15)) * Q.rotate('Y', vectors.radians(-15))
     u, v, w, s = qReal
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
     X,y,pts,z = getSceneAndNew(T_vector=T_vector, 
                                qReal=qReal, n1=100, n2=100, 
-                               sigma=sigma)
+                               sigma=sigma, generate=generate)
 
-    q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=100, beta=0.01, returnTraj=True)
+    q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250, beta=0.01, returnTraj=True)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)
     print 'Calculated t', around(-dot(inv(rotQ(q)),t), decimals=2)
     print 'Calculated R'
     print around(linalg.inv(rotQ(q)), decimals=2)
-    
-    print Ts
     
     plt.ion()
     fig = plt.figure()
