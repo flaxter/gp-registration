@@ -33,7 +33,7 @@ Standard optimization algorithms for real-time perception aren't adequate.
 {\bf Iterative Closest Point (ICP) algorithm} 
 \begin{figure}
 \includegraphics[width=10in]{icpCpp.jpg}
-\caption{Photo from Per Bergström via MATLAB FileExchange}
+\caption{Photo from Per Bergstrï¿½m via MATLAB FileExchange}
 \end{figure}
 
 {\bf Gaussian Mixture Models (GMM)}
@@ -66,29 +66,79 @@ Partial derivatives must be found with respect to the 7 parameters of $T$. Each 
 using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed relies on the {\bf Cholesky} decomposition.
 \end{block}
 
-\end{textblock}
-
-\begin{textblock}{27}(61,5)
-
 \begin{block}{Experimental Evaluation}
 \begin{figure}
-\includegraphics[width=10in]{likelihood.png}
+\includegraphics[width=8in]{likelihood.png}
 \caption{Convergence}
 \end{figure}
 
 \end{block}
 
-\begin{block}{References}
-{\scriptsize
- \bibliographystyle{abbrv}
- \bibliography{cmubib}
-}
+\end{textblock}
+
+\begin{textblock}{27}(61,5)
+
+\begin{block}{3D Model}
+Dataset: A cloud of 3-D points
+Representation: An elevation map (X,Y) $\rightarrow$ Z
+The Gaussian Process induces a probability distribution on the elevation of every (X,Y)
+
+\includegraphics[width=5in]{1DGaussianProcess.png}
+\includegraphics[width=5in]{2DGaussianProcess.png}
 \end{block}
+
+\begin{block}{Estimating orientation}
+Given two consecutive frames of 3D cloud datasets, we aim to find the most likely rigid transformation that converted the first into the second.
+
+\textbf{Input:} Two consecutive 3D datasets
+
+\textbf{Output:} The most likely rigid transformation from one scene to the other.
+\includegraphics[width=10in]{3DWorldModel.png}
+\end{block}
+
+\begin{block}{Experiments}
+We generated test data from a smooth distribution with several parameters:
+\begin{enumerate}
+\item Dataset size (100-2000)
+\item Magnitude of transformation between datasets
+\end{enumerate}
+\includegraphics[width=5in]{DistributionPlusPoints.png}
+\includegraphics[width=5in]{Reconstruction.png}
+\end{block}
+
 \end{textblock}
 
 
 \begin{textblock}{27}(91,5)
 
+\begin{block}{Parameter space}
+Our parameter search space is 7-D ([Tx,Ty,Tz],RotationQuaternion)
+A figure of the likelihood space on a 2-D projection of this space follows:
+\includegraphics[width=10in]{LLProjection.png}
+\end{block}
+
+\begin{block}{Comparison with other methods}
+Our method outperforms ICP by x% convergence rate, and is y% faster.
+
+\includegraphics[width=10in]{ConvergenceComparison.png}
+\includegraphics[width=10in]{SpeedComparison.png}
+\end{block}
+
+\begin{block}{Conclusions}
+\begin{itemize}
+\item dunno yet
+\item but i'll
+\item figure it
+\item out
+\end{itemize}
+\end{block}
+
+\begin{block}{References}
+{
+ \bibliographystyle{abbrv}
+ \bibliography{cmubib}
+}
+\end{block}
 
 \end{textblock}
 
