@@ -20,7 +20,7 @@
 \begin{block}{Motivation: Automatic Mapping of the World}
 \begin{figure}
 \includegraphics[width=10in]{kyle_kinect.jpg}
-\caption{Photo (CC-BY-SA-NC) Kyle McDonald}
+\caption{Kinect photo by Kyle McDonald (CC-BY-SA-NC)}
 \end{figure}
 
 3D range sensors like Velodyne and Kinect generate massive amounts of data, on the order of
@@ -67,7 +67,7 @@ The Gaussian Process induces a probability distribution on the elevation of ever
 
 \end{block}
 
-\begin{block}{Estimating The Transformation}
+\begin{block}{Estimating the Transformation}
 Given two consecutive frames of 3D cloud datasets, we aim to find the most likely rigid transformation that converted the first into the second.
 
 \textbf{Input:} Two consecutive 3D datasets
@@ -92,7 +92,7 @@ $$ \ln|\Sigma| + (T(x_*) - \mu)^T \Sigma^{-1} (T(x_*) - \mu)$$
 \end{block}
 
 
-\begin{block}{Parameter space}
+\begin{block}{Parameter Space}
 Our parameter search space (parameters of T) is 7-D.
 \begin{figure}
 \includegraphics[width=10in]{LLmap3.pdf}
@@ -142,7 +142,7 @@ We generated artificial test data from a smooth distribution with several parame
 \end{block}
 
 
-\begin{block}{Comparison with other methods}
+\begin{block}{Comparison with Other Methods}
 Our method outperforms ICP by x% convergence rate, and is y% faster.
 
 \includegraphics[width=5in]{convergence.pdf}
@@ -154,6 +154,7 @@ Our method outperforms ICP by x% convergence rate, and is y% faster.
 \item Gaussian Processes can represent and recover the transformation of a 3D scene
 \item The convergence rate and speed of Gaussian Processes outperforms ICP
 \item Robustness still needs work: much better performance with small transformations
+\item Needs to be evaluated with real point cloud data
 \item Currently only handles elevation data: general 3D point clouds require modeling density
 \item Newton's method is a straightforward extension, given derivation of Hessian
 \end{itemize}
