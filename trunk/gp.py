@@ -129,7 +129,7 @@ def gp(X, y, pts, K, L, alpha, sigma=0.1):
  
     return mean, var
     
-def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, returnTraj=False):
+def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, returnTraj=False, numerical=True):
     print X.shape
     print y.shape
     print pts.shape
@@ -179,129 +179,128 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
 
         ######################
         # first term  
-        ######################        
+        ######################   
         
-        Kstar = getK(X,pts)
-        Kstarstar = getK(pts,pts)
-        v = solve(L,Kstar) # L^-1 * Kstar
+        if not numerical:     
         
-        mean = dot(Kstar.T, alpha)
-        
-        # v^T v = (L^-1 Kstar)^T (L^-1 Kstar) = kstar^T (K + sigma^2 I)^-1 kstar
-        var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(Kstarstar.shape[0])
-        Lvar = cholesky(var)
-        
-        # tensor split into 6 matrices
-        # the following calculations will come in groups of 6 now
-        dKstar_x, dKstar_y, dKstar_s, dKstar_u, dKstar_v, dKstar_w = getDK(X, pts, Xnew, q) 
-        
-        # calculating derivative of the first term:
-        v_dKstar_x = solve(L, dKstar_x) # L^-1 dKstar1 (for x)
-        v_dKstar_y = solve(L, dKstar_y) # L^-1 dKstar2 (for y)
-        v_dKstar_s = solve(L, dKstar_s)
-        v_dKstar_u = solve(L, dKstar_u)
-        v_dKstar_v = solve(L, dKstar_v)
-        v_dKstar_w = solve(L, dKstar_w)
-        
-        dKstarstar_ds, dKstarstar_du, dKstarstar_dv, dKstarstar_dw = getDKstarstar(pts, Xnew, q)
-           
-        # -Kstar^T (K + sigma^2 I)^-1 dKstar1 - DKstar^T (K + sigma^2 I)^-1 Kstar1 
-        dCov_x = -dot(v.T, v_dKstar_x) - dot(v_dKstar_x.T, v) # (for x)
-        dCov_y = -dot(v.T, v_dKstar_y) - dot(v_dKstar_y.T, v) # (for y)
-        dCov_s = dKstarstar_ds - dot(v.T, v_dKstar_s) - dot(v_dKstar_s.T, v)
-        dCov_u = dKstarstar_du - dot(v.T, v_dKstar_u) - dot(v_dKstar_u.T, v)
-        dCov_v = dKstarstar_dv - dot(v.T, v_dKstar_v) - dot(v_dKstar_v.T, v)
-        dCov_w = dKstarstar_dw - dot(v.T, v_dKstar_w) - dot(v_dKstar_w.T, v)
-        
-        # (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1)
-        Dx = solve(Lvar.T, solve(Lvar, dCov_x)) 
-        Dy = solve(Lvar.T, solve(Lvar, dCov_y))
-        Ds = solve(Lvar.T, solve(Lvar, dCov_s))
-        Du = solve(Lvar.T, solve(Lvar, dCov_u))
-        Dv = solve(Lvar.T, solve(Lvar, dCov_v))
-        Dw = solve(Lvar.T, solve(Lvar, dCov_w))
-        
-        # as per Seth's equations, we take the trace of these bad boys
-        dx = trace(Dx) 
-        dy = trace(Dy)
-        ds = trace(Ds)
-        du = trace(Du)
-        dv = trace(Dv)
-        dw = trace(Dw)
-        
-        ######################
-        # now the second term  
-        ######################
-        
-        dz_ds, dz_du, dz_dv, dz_dw = dRotate(q, Xnew[:,0], Xnew[:,1], Xnew[:,2])        
-        # this extracts only the dz/dq components
-        dz_ds, dz_du, dz_dv, dz_dw = dz_ds[:,2], dz_du[:,2], dz_dv[:,2], dz_dw[:,2]        
-          
-        # errors in z
-        delt = z - mean
-        
-        # a lot packed in here...
-        # -2 (z - mean)^T (var)^-1 dKstar^T (K + sigma^2 I)^-1 * y   
-        dx -= -2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_x.T, alpha))))
-        dy -= -2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_y.T, alpha))))
-        ds -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds - dot(dKstar_s.T, alpha))))
-        du -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_du - dot(dKstar_u.T, alpha))))
-        dv -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dv - dot(dKstar_v.T, alpha))))
-        dw -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dw - dot(dKstar_w.T, alpha))))
-        
-        # even more here...
-        # - (z - mean)^T (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1) (var)^-1 (z - mean)
-        dx -= dot(dot(delt.T, Dx), solve(Lvar.T, solve(Lvar, delt)))
-        dy -= dot(dot(delt.T, Dy), solve(Lvar.T, solve(Lvar, delt)))
-        ds -= dot(dot(delt.T, Ds), solve(Lvar.T, solve(Lvar, delt)))
-        du -= dot(dot(delt.T, Du), solve(Lvar.T, solve(Lvar, delt)))
-        dv -= dot(dot(delt.T, Dv), solve(Lvar.T, solve(Lvar, delt)))
-        dw -= dot(dot(delt.T, Dw), solve(Lvar.T, solve(Lvar, delt)))
-        
-        # z is super easy...
-        Dz = ones((mean.shape[0],1))
-        v1 = solve(Lvar, delt) # L^-1 (z - mean)
-        v2 = solve(Lvar, Dz)   # L^-1 (1's)
-        
-        # (z - mean)^T (cov)^-1 1's 
-        # (the one's vector just sums it up)
-        dz = 2*dot(v1.T, v2)[0]
-        
-        N = mean.shape[0]
+            Kstar = getK(X,pts)
+            Kstarstar = getK(pts,pts)
+            v = solve(L,Kstar) # L^-1 * Kstar
+            
+            mean = dot(Kstar.T, alpha)
+            
+            # v^T v = (L^-1 Kstar)^T (L^-1 Kstar) = kstar^T (K + sigma^2 I)^-1 kstar
+            var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(Kstarstar.shape[0])
+            Lvar = cholesky(var)
+            
+            # tensor split into 6 matrices
+            # the following calculations will come in groups of 6 now
+            dKstar_x, dKstar_y, dKstar_s, dKstar_u, dKstar_v, dKstar_w = getDK(X, pts, Xnew, q) 
+            
+            # calculating derivative of the first term:
+            v_dKstar_x = solve(L, dKstar_x) # L^-1 dKstar1 (for x)
+            v_dKstar_y = solve(L, dKstar_y) # L^-1 dKstar2 (for y)
+            v_dKstar_s = solve(L, dKstar_s)
+            v_dKstar_u = solve(L, dKstar_u)
+            v_dKstar_v = solve(L, dKstar_v)
+            v_dKstar_w = solve(L, dKstar_w)
+            
+            dKstarstar_ds, dKstarstar_du, dKstarstar_dv, dKstarstar_dw = getDKstarstar(pts, Xnew, q)
+               
+            # -Kstar^T (K + sigma^2 I)^-1 dKstar1 - DKstar^T (K + sigma^2 I)^-1 Kstar1 
+            dCov_x = -dot(v.T, v_dKstar_x) - dot(v_dKstar_x.T, v) # (for x)
+            dCov_y = -dot(v.T, v_dKstar_y) - dot(v_dKstar_y.T, v) # (for y)
+            dCov_s = dKstarstar_ds - dot(v.T, v_dKstar_s) - dot(v_dKstar_s.T, v)
+            dCov_u = dKstarstar_du - dot(v.T, v_dKstar_u) - dot(v_dKstar_u.T, v)
+            dCov_v = dKstarstar_dv - dot(v.T, v_dKstar_v) - dot(v_dKstar_v.T, v)
+            dCov_w = dKstarstar_dw - dot(v.T, v_dKstar_w) - dot(v_dKstar_w.T, v)
+            
+            # (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1)
+            Dx = solve(Lvar.T, solve(Lvar, dCov_x)) 
+            Dy = solve(Lvar.T, solve(Lvar, dCov_y))
+            Ds = solve(Lvar.T, solve(Lvar, dCov_s))
+            Du = solve(Lvar.T, solve(Lvar, dCov_u))
+            Dv = solve(Lvar.T, solve(Lvar, dCov_v))
+            Dw = solve(Lvar.T, solve(Lvar, dCov_w))
+            
+            # as per Seth's equations, we take the trace of these bad boys
+            dx = trace(Dx) 
+            dy = trace(Dy)
+            ds = trace(Ds)
+            du = trace(Du)
+            dv = trace(Dv)
+            dw = trace(Dw)
+            
+            ######################
+            # now the second term  
+            ######################
+            
+            dz_ds, dz_du, dz_dv, dz_dw = dRotate(q, Xnew[:,0], Xnew[:,1], Xnew[:,2])        
+            # this extracts only the dz/dq components
+            dz_ds, dz_du, dz_dv, dz_dw = dz_ds[:,2], dz_du[:,2], dz_dv[:,2], dz_dw[:,2]        
+              
+            # errors in z
+            delt = z - mean
+            
+            # a lot packed in here...
+            # -2 (z - mean)^T (var)^-1 dKstar^T (K + sigma^2 I)^-1 * y   
+            dx -= -2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_x.T, alpha))))
+            dy -= -2*dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_y.T, alpha))))
+            ds -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds - dot(dKstar_s.T, alpha))))
+            du -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_du - dot(dKstar_u.T, alpha))))
+            dv -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dv - dot(dKstar_v.T, alpha))))
+            dw -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dw - dot(dKstar_w.T, alpha))))
+            
+            # even more here...
+            # - (z - mean)^T (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1) (var)^-1 (z - mean)
+            dx -= dot(dot(delt.T, Dx), solve(Lvar.T, solve(Lvar, delt)))
+            dy -= dot(dot(delt.T, Dy), solve(Lvar.T, solve(Lvar, delt)))
+            ds -= dot(dot(delt.T, Ds), solve(Lvar.T, solve(Lvar, delt)))
+            du -= dot(dot(delt.T, Du), solve(Lvar.T, solve(Lvar, delt)))
+            dv -= dot(dot(delt.T, Dv), solve(Lvar.T, solve(Lvar, delt)))
+            dw -= dot(dot(delt.T, Dw), solve(Lvar.T, solve(Lvar, delt)))
+            
+            # z is super easy...
+            Dz = ones((mean.shape[0],1))
+            v1 = solve(Lvar, delt) # L^-1 (z - mean)
+            v2 = solve(Lvar, Dz)   # L^-1 (1's)
+            
+            # (z - mean)^T (cov)^-1 1's 
+            # (the one's vector just sums it up)
+            dz = dot(v1.T, v2)[0]
+            
+        N = z.shape[0]
 
         def check_transform(stepX=0,stepY=0,stepZ=0,s=0,u=0,v=0,w=0):
             return transformPtsQ(Xnew, normalizeQ(q - array([s,u,v,w])), 
                                        array([tx-stepX,ty-stepY,tz-stepZ]))
 
-        def check_likelihood(stepX=0,stepY=0,stepZ=0,s=0,u=0,v=0,w=0):
+        def check_likelihood(stepX=0,stepY=0,stepZ=0,s=0,u=0,v=0,w=0, cache=None):
             Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - array([s,u,v,w])), 
                                        array([tx-stepX,ty-stepY,tz-stepZ]))
             pts = Xnew_transformed[:,0:2]
             z = Xnew_transformed[:,2]        
-            mean, var = gp_chol(X, y, pts, sigma=sigma)
+            if cache:
+                K, L, alpha = cache
+                mean, var = gp(X, y, pts, K, L, alpha, sigma=sigma)
+            else:
+                mean, var = gp_chol(X, y, pts, sigma=sigma)
             return getLogL_chol(mean, var, z)
 
-        delta = 1e-8
-        l = check_likelihood()
-        if False:
-                print "x %.05f vs %.05f"%(dx,(check_likelihood(stepX=-1 * delta) - l) / delta)
-                print "y %.05f vs %.05f"%(dy,(check_likelihood(stepY=-1 * delta) - l) / delta)
-                print "z %.05f vs %.05f"%(dz,(check_likelihood(stepZ=-1 * delta) - l) / delta)
-                print "s %.05f vs %.05f"%(ds,(check_likelihood(s=-1 * delta) - l) / delta)
-                print "u %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta) - l) / delta)
-                print "v %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta) - l) / delta)
-                print "w %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta) - l) / delta)
-        # just an idea--flip the signs to match the numerically calculated ones
-        if False:
-                dx = dx * (sign(dx * (check_likelihood(stepX=-1 * delta) - l)))
-                dy = dy * (sign(dy * (check_likelihood(stepY=-1 * delta) - l)))
-                dz = dz * (sign(dz * (check_likelihood(stepZ=-1 * delta) - l)))
-                ds = ds * (sign(ds * (check_likelihood(s=-1 * delta) - l)))
-                du = du * (sign(du * (check_likelihood(u=-1 * delta) - l)))
-                dv = dv * (sign(dv * (check_likelihood(v=-1 * delta) - l)))
-                dw = dw * (sign(dw * (check_likelihood(w=-1 * delta) - l)))
-        NUMERICAL = True
-        if NUMERICAL:
+        delta = 1e-7
+        cache = gp_bootstrap(X,y,sigma)
+        l = check_likelihood(cache=cache)
+
+        if not numerical:
+            print "x %.05f vs %.05f"%(dx,(check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta)
+            print "y %.05f vs %.05f"%(dy,(check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta)
+            print "z %.05f vs %.05f"%(dz,(check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta)
+            print "s %.05f vs %.05f"%(ds,(check_likelihood(s=-1 * delta, cache=cache) - l) / delta)
+            print "u %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta, cache=cache) - l) / delta)
+            print "v %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta, cache=cache) - l) / delta)
+            print "w %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta, cache=cache) - l) / delta)
+        
+        if numerical:
                 dx = (check_likelihood(stepX=-1 * delta) - l) / delta
                 dy = (check_likelihood(stepY=-1 * delta) - l) / delta
                 dz = (check_likelihood(stepZ=-1 * delta) - l) / delta
@@ -469,6 +468,35 @@ def generate_sym(X, Y, phi=0):
     R = 1 - np.sqrt(X**2 + Y**2)
     return np.cos(2 * np.pi * X * Y + phi) * R 
     
+def getSceneAndNew(randPoints=False, randPointsScene=False, T_vector = [0,1.5,-.5], generate=generate, n1 = 1000, n2=100,
+                   qReal=array([1.0,0.0,0.0,0.0]), sigma=0.1):
+    import numpy as np               
+    # pick a whole bunch of random points (x,y) and then generate z + noise
+    if randPointsScene:
+        xs = 2*rand(n1) - 1
+        ys = 2*rand(n1) - 1
+        zs = generate(xs, ys, 0.0)
+    else:
+        xs, ys = np.meshgrid(np.linspace(-1, 1, sqrt(n1)), 
+                             np.linspace(-1, 1, sqrt(n1)))
+        zs = generate(xs, ys, 0.0)
+   
+    # now pick some new test points  
+    if randPoints: 
+        X = 2*rand(n2) - 1
+        Y = 2*rand(n2) - 1
+    else:
+        X, Y = np.meshgrid(np.linspace(-1, 1, sqrt(n2)), 
+                           np.linspace(-1, 1, sqrt(n2)))
+
+    Z = generate(X, Y, 0.0)
+    
+    XYZ = np.concatenate([[X.flatten()],[Y.flatten()],[Z.flatten()]]).T
+    XYZ_transformed = transformPtsQ(XYZ, qReal, T_vector)
+    return (np.concatenate([[xs.flatten()],[ys.flatten()]]).T, zs.flatten(), 
+            XYZ_transformed[:,:2],
+            XYZ_transformed[:,2])
+    
 def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=generate, n1 = 1000, n2=100,
            qReal=array([1.0,0.0,0.0,0.0]), sigma=0.1, randPointsScene=True):
     from mpl_toolkits.mplot3d import axes3d, Axes3D
@@ -552,14 +580,14 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
 def test():
     sigma = 0.1
 
-    T_vector = [0,0.2,-.2] #.075,-.02,.03]
-    qReal = Q.rotate('Z', vectors.radians(30)) * Q.rotate('X', vectors.radians(15)) #-5))
+    T_vector = [0.2,0.2,-.2] #.075,-.02,.03]
+    qReal = Q.rotate('Z', vectors.radians(-30)) * Q.rotate('X', vectors.radians(15)) #-5))
     u, v, w, s = qReal
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
     X,y,pts,z = case2D(randPoints=False, randPointsScene=False, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=500, n2=200, 
+                       T_vector=T_vector, qReal=qReal, n1=100, n2=25, 
                        sigma=sigma)
 #    X2,y2,pts2,z2 = case2D(randPoints=True, plotIt=False, 
 #                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
