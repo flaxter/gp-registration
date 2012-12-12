@@ -5,6 +5,7 @@ from gp import generate, getLogL_chol, shuffleIt, gp, gp_bootstrap, getSceneAndN
 
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import time
 from matplotlib import cm
@@ -162,7 +163,7 @@ def getFrobErr(R,t,R2,t2):
 from pylab import * 
 from pickle import load   
 def runTests():
-    
+    matplotlib.rcParams.update({'font.size': 24})
     sigma=0.1
     outF = open('convergenceDumpGP','r')
     (tParams,resMSE,resFrob) = load(outF)
@@ -204,7 +205,7 @@ def runTests():
         if i == 1 or i == 2:
             X = sorted(mse[i,:])
             plot(X,[v/100. for v in arange(N)], styles[i], lw=7) # marker=markers[i], ms=5
-    title('Convergence Results for 100 Random Rigid Transformations')    
+    title('Convergence Results')    
     ylabel("p(MSE < x)")
     xlabel("x")
     legend(('icp','gp'), loc='lower right')
@@ -218,6 +219,7 @@ def stddev(lst):
     return sqrt(sum([(x-a)**2 for x in lst]))   
     
 def runScalingTests():
+    matplotlib.rcParams.update({'font.size': 24})
     outF = open('scalingDumpGP','r')
     (tParams,rr, N, t1, dev) = load(outF)
     
@@ -254,6 +256,7 @@ def runScalingTests():
     xlabel('Number of Points')
     ylabel('Time until Convergence (s)')
     legend(['icp', 'gp'], loc='best') #, 'emicp-openmp', 'emicp-gpu', 'softassign'])
+    
     show()   
         
 
@@ -261,5 +264,5 @@ if __name__ == '__main__':
     #LLsurface_plot(n1=500, n2=25)
     #animPoints()
     
-    #runTests()
-    runScalingTests()
+    runTests()
+    #runScalingTests()
