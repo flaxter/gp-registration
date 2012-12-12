@@ -1,13 +1,20 @@
 from numpy.random import randn, rand
-from quaternions import transformPts
-
-from gp import generate, getLogL_chol, shuffleIt, gp, gp_bootstrap, case2D, gradientDescent
+from quaternions import transformPtsQ, transformPts
+from numpy.linalg import norm, inv, cholesky, solve, det
+from gp import generate, getLogL_chol, shuffleIt, gp, gp_bootstrap, getSceneAndNew, gradientDescent
 
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 import time
 from matplotlib import cm
+
+import vectors
+from vectors import M, Q
+
+from numpy import *
+
+from quaternions import rotQ
 
 def generate2(X, Y):
     return X**2 + Y**2 
@@ -77,16 +84,16 @@ def animPoints():
     sigma = 0.1
 
     T_vector = [.075,-.02,.03]
-    qReal = Q.rotate('Z', vectors.radians(-5))
+    qReal = Q.rotate('Z', vectors.radians(-15))
     u, v, w, s = qReal
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
-    X,y,pts,z = case2D(randPoints=True, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=100, n2=50, 
-                       sigma=sigma)
+    X,y,pts,z = getSceneAndNew(T_vector=T_vector, 
+                               qReal=qReal, n1=100, n2=100, 
+                               sigma=sigma)
 
-    q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=100, beta=0.00005, returnTraj=True)
+    q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=100, beta=0.01, returnTraj=True)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)
@@ -95,6 +102,29 @@ def animPoints():
     print around(linalg.inv(rotQ(q)), decimals=2)
     
     print Ts
+    
+    plt.ion()
+    fig = plt.figure()
+    ax = Axes3D(fig)    
+    ax.scatter(X[:,0], X[:,1], y, c='r')
+    
+    animPts = None
+    while True:
+        for T in Ts: 
+            old = animPts
+            
+            pts3d = concatenate((pts, atleast_2d(z).T), axis=1)
+            ptsNew = transformPtsQ(pts3d, T[3], array([T[0], T[1], T[2]]))
+            
+            animPts = ax.scatter(ptsNew[:,0], 
+                                 ptsNew[:,1], 
+                                 ptsNew[:,2])
+                                 
+            if old is not None:
+                ax.collections.remove(old)
+                                 
+            plt.draw()
+    plt.show()
 
 if __name__ == '__main__':
     #LLsurface_plot(n1=500, n2=25)
