@@ -300,17 +300,30 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             print "v %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta, cache=cache) - l) / delta)
             print "w %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta, cache=cache) - l) / delta)
         
+        import numpy as np
         if numerical:
-                dx = (check_likelihood(stepX=-1 * delta) - l) / delta
-                dy = (check_likelihood(stepY=-1 * delta) - l) / delta
-                dz = (check_likelihood(stepZ=-1 * delta) - l) / delta
-                ds = (check_likelihood(s=-1 * delta) - l) / delta
-                du = (check_likelihood(u=-1 * delta) - l) / delta
-                dv = (check_likelihood(v=-1 * delta) - l) / delta
-                dw = (check_likelihood(w=-1 * delta) - l) / delta
+            dx = (check_likelihood(stepX=-1 * delta) - l) / delta
+            dy = (check_likelihood(stepY=-1 * delta) - l) / delta
+            dz = (check_likelihood(stepZ=-1 * delta) - l) / delta
+            ds = (check_likelihood(s=-1 * delta) - l) / delta
+            du = (check_likelihood(u=-1 * delta) - l) / delta
+            dv = (check_likelihood(v=-1 * delta) - l) / delta
+            dw = (check_likelihood(w=-1 * delta) - l) / delta
+        if False:
+            Hess = np.zeros([7,7],float)
+            deltasqrt2 = delta * sqrt(2)
+            for i in range(7):
+                for j in range(7):
+                    tmp = [0] * 7
+                    tmp[i] = -1 * delta
+                    tmp[j] = -1 * delta
+                    Hess[i][j] = (check_likelihood(*tmp,cache=cache) - l) / deltasq
+            HI = inv(Hess)
+            import code; code.interact(local=locals())
+            print "before", dx,dy,dz,ds,du,dv,dw
+            dx,dy,dz,ds,du,dv,dw = list(np.dot(HI, array([[dx,dy,dz,ds,du,dv,dw]]).T).T[0]) 
+            print "after", dx,dy,dz,ds,du,dv,dw
                 
-                
-#        import code; code.interact(local=locals())
         
         stepChange_t = beta/N#*sigma*sigma
         stepChange_q = beta * beta / N #stepChange_t ** 2 #beta/N#*sigma*sigma
@@ -606,8 +619,8 @@ def test():
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
-    X,y,pts,z = case2D(randPoints=False, randPointsScene=True, plotIt=True, 
-                       T_vector=T_vector, qReal=qReal, n1=100, n2=50*50, 
+    X,y,pts,z = case2D(randPoints=False, randPointsScene=True, plotIt=False, 
+                       T_vector=T_vector, qReal=qReal, n1=100, n2=50,#*50, 
                        sigma=sigma)
 #    X2,y2,pts2,z2 = case2D(randPoints=True, plotIt=False, 
 #                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
@@ -621,7 +634,7 @@ def test():
     #print X,y,pts,z
     #exit()
     
-    raw_input()
+    #raw_input()
     
     q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200, beta=0.01)
     print 'Real Translation', around(T_vector, decimals=2)
