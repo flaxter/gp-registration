@@ -105,7 +105,18 @@ def gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1):
  
     return mean, var
     
-def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
+def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
+    print X.shape
+    print y.shape
+    print pts.shape
+    print z.shape
+
+    print type(X)
+    print type(y)
+    print type(pts)
+    print type(z)
+
+    print 'Hello'
     # these are constants in the calculations
     K, Kstarstar, L, alpha = gp_bootstrap(X,y,pts,sigma) #.4 seconds
     
@@ -120,6 +131,15 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
     q = array([1.0,0.0,0.0,0.0])
     
     LL_last = 99e9
+
+    plotSteps=True
+    if plotSteps:
+    	from mpl_toolkits.mplot3d import axes3d, Axes3D
+    	import matplotlib.pyplot as pl
+	from pylab import ion
+        ion()
+        fig=pl.figure()
+        ax=Axes3D(fig)
 
     if verbose > 1:
         print 'translation offset\t negative log likelihood (should be minimized)'
@@ -197,7 +217,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
         du -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_du - dot(dKstar_u.T, alpha))))
         dv -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dv - dot(dKstar_v.T, alpha))))
         dw -=  2*dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dw - dot(dKstar_w.T, alpha))))
-          
+        
         # even more here...
         # - (z - mean)^T (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1) (var)^-1 (z - mean)
         dx -= dot(dot(delt.T, Dx), solve(Lvar.T, solve(Lvar, delt)))
@@ -216,10 +236,10 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
         # (the one's vector just sums it up)
         dz = 2*dot(v1.T, v2)[0]
         
-        beta = 0.0005
         N = mean.shape[0]
         
-        if False: # backtracking line search
+	isBacktrack=False
+        if isBacktrack: # backtracking line search
             LL = 2*LL_last 
             while LL > LL_last:
                 stepChange_t = beta/N#*sigma*sigma
@@ -240,7 +260,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
         
         else:
             stepChange_t = beta/N#*sigma*sigma
-            stepChange_q = beta/N#*sigma*sigma
+            stepChange_q = beta*beta/N#*sigma*sigma
             stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
             stepQ = stepChange_q*array([ds, du, dv, dw]) 
             
@@ -252,15 +272,21 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35):
             # now we transform the Xnew by q and tx,ty,tz for the next iteration
             Xnew_transformed = transformPtsQ(Xnew, q, array([tx,ty,tz]))
             pts = Xnew_transformed[:,0:2]
-            z = Xnew_transformed[:,2]        
+            z = Xnew_transformed[:,2]
             mean, var = gp_chol(X, y, pts, sigma=sigma)
             LL = getLogL_chol(mean, var, z)
         
         if verbose > 1:
-            print '%5.4f\t'*8 % (tx, ty, tz, 
+            print '%5.14f\t'*8 % (tx, ty, tz, 
                                  q[0], q[1], q[2], q[3], 
                                  LL)
-                                 
+        if plotSteps:
+            ax.clear()
+            ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'g.')
+            ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'b.')
+            ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
+            pl.draw()
+
         if abs((LL-LL_last)/LL_last) < 1e-5 or LL-LL_last > 0: break
         
         LL_last = LL
@@ -385,9 +411,9 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     else:
         X, Y = np.meshgrid(np.linspace(-1, 1, sqrt(n2)), 
                            np.linspace(-1, 1, sqrt(n2)))
-                           
+
     Z = generate(X, Y, 0.0)
-          
+
     # now predict the z component from the xs,ys,zs
     st = time.time()
     
@@ -441,9 +467,9 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     
 if __name__ == '__main__':
     #case1D()
-    
+
     sigma = 0.1
-    
+
     T_vector = [0.0,0.0,0.0]
     qReal = Q.rotate('Z', vectors.radians(-15))
     u, v, w, s = qReal
@@ -453,8 +479,9 @@ if __name__ == '__main__':
     X,y,pts,z = case2D(randPoints=True, plotIt=False, 
                        T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
                        sigma=sigma)
-    
-    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250)
+    #print X,y,pts,z
+    #exit()
+    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250,beta=0.005)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)
