@@ -267,36 +267,51 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         # (the one's vector just sums it up)
         dz = 2*dot(v1.T, v2)[0]
         
-        beta = .005 #0.0005
         N = mean.shape[0]
 
-        
-        isBacktrack=False
-        if isBacktrack: # backtracking line search
-            def calculate_likelihood(stepsize):
-                stepChange_t = stepsize * beta/N#*sigma*sigma
-                stepChange_q = stepsize * beta * beta/N#*beta*sigma*sigma
-                stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
-                stepQ = stepChange_q*array([ds, du, dv, dw]) 
+        def check_transform(stepX=0,stepY=0,stepZ=0,s=0,u=0,v=0,w=0):
+            return transformPtsQ(Xnew, normalizeQ(q - array([s,u,v,w])), 
+                                       array([tx-stepX,ty-stepY,tz-stepZ]))
 
-                # now we transform the Xnew by q and tx,ty,tz for the next iteration
-                Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - stepQ), 
-                                                 array([tx-stepX,ty-stepY,tz-stepZ]))
-                pts = Xnew_transformed[:,0:2]
-                z = Xnew_transformed[:,2]        
-                mean, var = gp_chol(X, y, pts, sigma=sigma)
-                return getLogL_chol(mean, var, z)
+        def check_likelihood(stepX=0,stepY=0,stepZ=0,s=0,u=0,v=0,w=0):
+            Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - array([s,u,v,w])), 
+                                       array([tx-stepX,ty-stepY,tz-stepZ]))
+            pts = Xnew_transformed[:,0:2]
+            z = Xnew_transformed[:,2]        
+            mean, var = gp_chol(X, y, pts, sigma=sigma)
+            return getLogL_chol(mean, var, z)
 
-                sqLength = norm(array([dx,dy,dz]))**2 + norm(array([ds,du,dv,dw]))**2
-                LL_last = calculate_likelihood(0)
-            #import code; code.interact(local=locals())
-                stepsize = 1
-            while calculate_likelihood(stepsize) > (LL_last - .5 * stepsize * beta / N * sqLength) and stepsize > 1e-2:
-                stepsize *= 0.8
-                #print calculate_likelihood(stepsize), (LL_last - .5 * stepsize * beta / N * sqLength), stepsize
-
-                beta = beta * stepsize
-                print "beta", beta
+        delta = 1e-8
+        l = check_likelihood()
+        if False:
+                print "x %.05f vs %.05f"%(dx,(check_likelihood(stepX=-1 * delta) - l) / delta)
+                print "y %.05f vs %.05f"%(dy,(check_likelihood(stepY=-1 * delta) - l) / delta)
+                print "z %.05f vs %.05f"%(dz,(check_likelihood(stepZ=-1 * delta) - l) / delta)
+                print "s %.05f vs %.05f"%(ds,(check_likelihood(s=-1 * delta) - l) / delta)
+                print "u %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta) - l) / delta)
+                print "v %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta) - l) / delta)
+                print "w %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta) - l) / delta)
+        # just an idea--flip the signs to match the numerically calculated ones
+        if False:
+                dx = dx * (sign(dx * (check_likelihood(stepX=-1 * delta) - l)))
+                dy = dy * (sign(dy * (check_likelihood(stepY=-1 * delta) - l)))
+                dz = dz * (sign(dz * (check_likelihood(stepZ=-1 * delta) - l)))
+                ds = ds * (sign(ds * (check_likelihood(s=-1 * delta) - l)))
+                du = du * (sign(du * (check_likelihood(u=-1 * delta) - l)))
+                dv = dv * (sign(dv * (check_likelihood(v=-1 * delta) - l)))
+                dw = dw * (sign(dw * (check_likelihood(w=-1 * delta) - l)))
+        NUMERICAL = True
+        if NUMERICAL:
+                dx = (check_likelihood(stepX=-1 * delta) - l) / delta
+                dy = (check_likelihood(stepY=-1 * delta) - l) / delta
+                dz = (check_likelihood(stepZ=-1 * delta) - l) / delta
+                ds = (check_likelihood(s=-1 * delta) - l) / delta
+                du = (check_likelihood(u=-1 * delta) - l) / delta
+                dv = (check_likelihood(v=-1 * delta) - l) / delta
+                dw = (check_likelihood(w=-1 * delta) - l) / delta
+                
+                
+#        import code; code.interact(local=locals())
         
         stepChange_t = beta/N#*sigma*sigma
         stepChange_q = beta * beta / N #stepChange_t ** 2 #beta/N#*sigma*sigma
@@ -537,14 +552,14 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
 def test():
     sigma = 0.1
 
-    T_vector = [0,0.2,-.5] #.075,-.02,.03]
-    qReal = Q.rotate('Z', vectors.radians(15)) #-5))
+    T_vector = [0,0.2,-.2] #.075,-.02,.03]
+    qReal = Q.rotate('Z', vectors.radians(30)) * Q.rotate('X', vectors.radians(15)) #-5))
     u, v, w, s = qReal
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
     X,y,pts,z = case2D(randPoints=False, randPointsScene=False, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=100, n2=100, 
+                       T_vector=T_vector, qReal=qReal, n1=500, n2=200, 
                        sigma=sigma)
 #    X2,y2,pts2,z2 = case2D(randPoints=True, plotIt=False, 
 #                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
@@ -557,7 +572,7 @@ def test():
 
     #print X,y,pts,z
     #exit()
-    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=100, beta=0.005)
+    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200, beta=0.01)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)
