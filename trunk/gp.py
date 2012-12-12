@@ -88,16 +88,16 @@ def gp_chol(X,y,pts,sigma=0.1):
  
     return mean, var
     
-def gp_bootstrap(X,y,pts,sigma=0.1):
+def gp_bootstrap(X,y,sigma=0.1):
     K = getK(X,X)
-    Kstarstar = getK(pts,pts)
     L = cholesky(K + (sigma**2)*eye(K.shape[0]))
     alpha = solve(L.T,solve(L,y))
 
-    return K, Kstarstar, L, alpha
+    return K, L, alpha
 
-def gp(X, y, pts, K, Kstarstar, L, alpha, sigma=0.1):
-    Kstar = getK(X,pts)    
+def gp(X, y, pts, K, L, alpha, sigma=0.1):
+    Kstar = getK(X,pts) 
+    Kstarstar = getK(pts,pts)   
     mean = dot(Kstar.T, alpha)
     
     v = solve(L,Kstar)   
@@ -118,7 +118,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
 
     print 'Hello'
     # these are constants in the calculations
-    K, Kstarstar, L, alpha = gp_bootstrap(X,y,pts,sigma) #.4 seconds
+    K, L, alpha = gp_bootstrap(X,y,sigma) #.4 seconds
     
     # K is K(X,X)
     # Kstarstar is K(X',X')
@@ -134,9 +134,9 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
 
     plotSteps=True
     if plotSteps:
-    	from mpl_toolkits.mplot3d import axes3d, Axes3D
-    	import matplotlib.pyplot as pl
-	from pylab import ion
+        from mpl_toolkits.mplot3d import axes3d, Axes3D
+        import matplotlib.pyplot as pl
+        from pylab import ion
         ion()
         fig=pl.figure()
         ax=Axes3D(fig)
@@ -240,52 +240,52 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
         N = mean.shape[0]
 
         
-	isBacktrack=False
+        isBacktrack=False
         if isBacktrack: # backtracking line search
-  	    def calculate_likelihood(stepsize):
+            def calculate_likelihood(stepsize):
                 stepChange_t = stepsize * beta/N#*sigma*sigma
                 stepChange_q = stepsize * beta * beta/N#*beta*sigma*sigma
                 stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
                 stepQ = stepChange_q*array([ds, du, dv, dw]) 
 
-	        # now we transform the Xnew by q and tx,ty,tz for the next iteration
-	        Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - stepQ), 
-					 array([tx-stepX,ty-stepY,tz-stepZ]))
-	        pts = Xnew_transformed[:,0:2]
-	        z = Xnew_transformed[:,2]        
-	        mean, var = gp_chol(X, y, pts, sigma=sigma)
-	        return getLogL_chol(mean, var, z)
+                # now we transform the Xnew by q and tx,ty,tz for the next iteration
+                Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - stepQ), 
+                                                 array([tx-stepX,ty-stepY,tz-stepZ]))
+                pts = Xnew_transformed[:,0:2]
+                z = Xnew_transformed[:,2]        
+                mean, var = gp_chol(X, y, pts, sigma=sigma)
+                return getLogL_chol(mean, var, z)
 
-	    sqLength = norm(array([dx,dy,dz]))**2 + norm(array([ds,du,dv,dw]))**2
-	    LL_last = calculate_likelihood(0)
-#	    import code; code.interact(local=locals())
-	    stepsize = 1
+	        sqLength = norm(array([dx,dy,dz]))**2 + norm(array([ds,du,dv,dw]))**2
+	        LL_last = calculate_likelihood(0)
+            #import code; code.interact(local=locals())
+	        stepsize = 1
             while calculate_likelihood(stepsize) > (LL_last - .5 * stepsize * beta / N * sqLength) and stepsize > 1e-2:
                 stepsize *= 0.8
-#            	print calculate_likelihood(stepsize), (LL_last - .5 * stepsize * beta / N * sqLength), stepsize
+                #print calculate_likelihood(stepsize), (LL_last - .5 * stepsize * beta / N * sqLength), stepsize
 
-	    beta = beta * stepsize
-	    print "beta", beta
-        if True:
-            stepChange_t = beta/N#*sigma*sigma
-            stepChange_q = beta * beta / N #stepChange_t ** 2 #beta/N#*sigma*sigma
-            stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
-            stepQ = stepChange_q*array([ds, du, dv, dw]) 
-            
-            tx -= stepX
-            ty -= stepY
-            tz -= stepZ
-            q = normalizeQ(q - stepQ) 
-            
-            # now we transform the Xnew by q and tx,ty,tz for the next iteration
-            Xnew_transformed = transformPtsQ(Xnew, q, array([tx,ty,tz]))
-            pts = Xnew_transformed[:,0:2]
-            z = Xnew_transformed[:,2]
-            mean, var = gp_chol(X, y, pts, sigma=sigma)
-            LL = getLogL_chol(mean, var, z)
+	        beta = beta * stepsize
+	        print "beta", beta
+        
+        stepChange_t = beta/N#*sigma*sigma
+        stepChange_q = beta * beta / N #stepChange_t ** 2 #beta/N#*sigma*sigma
+        stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
+        stepQ = stepChange_q*array([ds, du, dv, dw]) 
+        
+        tx -= stepX
+        ty -= stepY
+        tz -= stepZ
+        q = normalizeQ(q - stepQ) 
+        
+        # now we transform the Xnew by q and tx,ty,tz for the next iteration
+        Xnew_transformed = transformPtsQ(Xnew, q, array([tx,ty,tz]))
+        pts = Xnew_transformed[:,0:2]
+        z = Xnew_transformed[:,2]
+        mean, var = gp_chol(X, y, pts, sigma=sigma)
+        LL = getLogL_chol(mean, var, z)
         
         if verbose > 1:
-            print '%5.14f\t'*8 % (tx, ty, tz, 
+            print '%5.4f\t'*8 % (tx, ty, tz, 
                                  q[0], q[1], q[2], q[3], 
                                  LL)
         if plotSteps:
@@ -295,9 +295,10 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
             ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
             pl.draw()
 
-	if abs((LL-LL_last)/LL_last) < 1e-5: break # or LL-LL_last > 0: break
+	if abs((LL-LL_last)/LL_last) < 1e-5: 
+	    break # or LL-LL_last > 0: break
         
-        LL_last = LL
+    LL_last = LL
             
 
     likelihood = getLogL_chol(mean, var, z)
@@ -389,12 +390,12 @@ def case1D():
 
     pl.show()
 
-def generate(X, Y, phi):
+def generate(X, Y, phi=0):
     import numpy as np
     R = 1 - np.sqrt(X**2 + Y**2)
     return np.cos(2 * np.pi * X + phi) * R + Y*Y 
 
-def generate_sym(X, Y, phi):
+def generate_sym(X, Y, phi=0):
     import numpy as np
     R = 1 - np.sqrt(X**2 + Y**2)
     return np.cos(2 * np.pi * X * Y + phi) * R 
@@ -472,11 +473,6 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
     return (np.concatenate([[xs],[ys]]).T, zs, 
             XYZ_transformed[:,:2],
             XYZ_transformed[:,2])
-    
-if __name__ == '__main__':
-    #case1D()
-
-    test()
 
 def test():
     sigma = 0.1
@@ -492,10 +488,15 @@ def test():
                        sigma=sigma)
     #print X,y,pts,z
     #exit()
-    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250,beta=0.005)
+    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250, beta=0.005)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)
     print 'Calculated t', around(-dot(inv(rotQ(q)),t), decimals=2)
     print 'Calculated R'
     print around(linalg.inv(rotQ(q)), decimals=2)
+    
+if __name__ == '__main__':
+    #case1D()
+
+    test()
