@@ -236,31 +236,39 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
         # (the one's vector just sums it up)
         dz = 2*dot(v1.T, v2)[0]
         
+        beta = .005 #0.0005
         N = mean.shape[0]
+
         
 	isBacktrack=False
         if isBacktrack: # backtracking line search
-            LL = 2*LL_last 
-            while LL > LL_last:
-                stepChange_t = beta/N#*sigma*sigma
-                stepChange_q = beta/N#*beta*sigma*sigma
+  	    def calculate_likelihood(stepsize):
+                stepChange_t = stepsize * beta/N#*sigma*sigma
+                stepChange_q = stepsize * beta * beta/N#*beta*sigma*sigma
                 stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
                 stepQ = stepChange_q*array([ds, du, dv, dw]) 
-                                
-                # now we transform the Xnew by q and tx,ty,tz for the next iteration
-                Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - stepQ), 
-                                                 array([tx-stepX,ty-stepY,tz-stepZ]))
-                pts = Xnew_transformed[:,0:2]
-                z = Xnew_transformed[:,2]        
-                mean, var = gp_chol(X, y, pts, sigma=sigma)
-                LL = getLogL_chol(mean, var, z)
-                
-                beta *= 0.8
-                if beta < 1e-10: break
-        
-        else:
+
+	        # now we transform the Xnew by q and tx,ty,tz for the next iteration
+	        Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - stepQ), 
+					 array([tx-stepX,ty-stepY,tz-stepZ]))
+	        pts = Xnew_transformed[:,0:2]
+	        z = Xnew_transformed[:,2]        
+	        mean, var = gp_chol(X, y, pts, sigma=sigma)
+	        return getLogL_chol(mean, var, z)
+
+	    sqLength = norm(array([dx,dy,dz]))**2 + norm(array([ds,du,dv,dw]))**2
+	    LL_last = calculate_likelihood(0)
+#	    import code; code.interact(local=locals())
+	    stepsize = 1
+            while calculate_likelihood(stepsize) > (LL_last - .5 * stepsize * beta / N * sqLength) and stepsize > 1e-2:
+                stepsize *= 0.8
+#            	print calculate_likelihood(stepsize), (LL_last - .5 * stepsize * beta / N * sqLength), stepsize
+
+	    beta = beta * stepsize
+	    print "beta", beta
+        if True:
             stepChange_t = beta/N#*sigma*sigma
-            stepChange_q = beta*beta/N#*sigma*sigma
+            stepChange_q = beta * beta / N #stepChange_t ** 2 #beta/N#*sigma*sigma
             stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
             stepQ = stepChange_q*array([ds, du, dv, dw]) 
             
@@ -287,7 +295,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
             ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
             pl.draw()
 
-        if abs((LL-LL_last)/LL_last) < 1e-5 or LL-LL_last > 0: break
+	if abs((LL-LL_last)/LL_last) < 1e-5: break # or LL-LL_last > 0: break
         
         LL_last = LL
             
@@ -468,16 +476,19 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
 if __name__ == '__main__':
     #case1D()
 
+    test()
+
+def test():
     sigma = 0.1
 
-    T_vector = [0.0,0.0,0.0]
-    qReal = Q.rotate('Z', vectors.radians(-15))
+    T_vector = [.75,-.2,.3]
+    qReal = Q.rotate('Z', vectors.radians(-5))
     u, v, w, s = qReal
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
     X,y,pts,z = case2D(randPoints=True, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
+                       T_vector=T_vector, qReal=qReal, n1=1000, n2=200, 
                        sigma=sigma)
     #print X,y,pts,z
     #exit()
