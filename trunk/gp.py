@@ -536,38 +536,58 @@ def case2D(plotIt=True, randPoints=False, T_vector = [0,1.5,-.5], generate=gener
         
     
     if plotIt == True:    
-        fig = plt.figure()
+        '''fig = plt.figure()
         plt.plot(linspace(-1,1,100), [getLogL_chol(mean, var, Z.flatten()+i) for i in linspace(-1,1,100)]) 
         plt.title('Varying $t_z$ from -1 to 1')
         plt.ylabel('Negative Log-Likelihood')
-        plt.xlabel('$t_z$')
+        plt.xlabel('$t_z$')'''
     
-        fig = plt.figure()
+        '''fig = plt.figure()
 
         var_masked = var.copy()
         var_masked[var <= 0] = 1e-10
-        plt.imshow(shuffleIt(log(var_masked)), interpolation='nearest') 
+        plt.imshow(shuffleIt(log(var_masked)), interpolation='nearest')''' 
     
         fig = plt.figure()
 
         #ax = fig.add_subplot(111, projection='3d')
         ax = Axes3D(fig)
         
-        scene = ax.scatter(xs, ys, zs, c='r')
         
-        #predicted = ax.plot_surface(X, Y, mean.reshape(X.shape), linewidth=0, cmap=cm.hot, alpha=0.5)
-        predicted = ax.plot_wireframe(X, Y, mean.reshape(X.shape), color='g')
+        
+        xs2 = np.linspace(-1, 1, 50)
+        ys2 = np.linspace(-1, 1, 50)
+        Xs, Ys = np.meshgrid(xs2, ys2)
+        Zs = generate(Xs, Ys, 0.0)
+        
+        print dir(cm)
 
-        xs = np.linspace(-1, 1, 50)
-        ys = np.linspace(-1, 1, 50)
-        X, Y = np.meshgrid(xs, ys)
-        Z = generate(X, Y, 0.0)
-
-        wframe = ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1)
+        ax.plot_surface(Xs, Ys, Zs, linewidth=0, cmap=cm.Blues, alpha=0.5, rstride=1, cstride=1, label='Actual Surface')
+        #wframe = ax.plot_wireframe(Xs, Ys, Zs, rstride=1, cstride=1)
+        
+        scene = ax.scatter(xs, ys, zs, c='r', s=50, label='Point Cloud')
         
         ax.set_xlim3d(-1, 1)
         ax.set_ylim3d(-1, 1)
-        ax.set_zlim3d(-1, 1)
+        ax.set_zlim3d(-0, 1)
+        
+        #ax.title('Actual Surface and Point Cloud')
+        
+        
+        fig = plt.figure()
+
+        #ax = fig.add_subplot(111, projection='3d')
+        ax = Axes3D(fig)
+   
+        predicted = ax.plot_surface(X, Y, mean.reshape(X.shape), linewidth=0, cmap=cm.hot, alpha=0.8, rstride=1, cstride=1, label='Reconstruction')
+        #predicted = ax.plot_wireframe(X, Y, mean.reshape(X.shape), color='g')
+
+        ax.set_xlim3d(-1, 1)
+        ax.set_ylim3d(-1, 1)
+        ax.set_zlim3d(-0, 1)
+
+        #ax.legend(['Reconstruction'])
+        #ax.title('Reconstruction')
         
         plt.show()
     
@@ -586,8 +606,8 @@ def test():
     qReal = array([s, u, v, w])
     print qReal
     print 'Translation', T_vector
-    X,y,pts,z = case2D(randPoints=False, randPointsScene=False, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=100, n2=25, 
+    X,y,pts,z = case2D(randPoints=False, randPointsScene=True, plotIt=True, 
+                       T_vector=T_vector, qReal=qReal, n1=100, n2=50*50, 
                        sigma=sigma)
 #    X2,y2,pts2,z2 = case2D(randPoints=True, plotIt=False, 
 #                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
@@ -600,6 +620,9 @@ def test():
 
     #print X,y,pts,z
     #exit()
+    
+    raw_input()
+    
     q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200, beta=0.01)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
