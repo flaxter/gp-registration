@@ -8,8 +8,12 @@
 \setlength{\TPVertModule}{1cm}
 
 \title{Fast Point Cloud Registration using Gaussian Processes}
-\author{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Ben Eckart, Seth Flaxman, Antonio Juarez}
-\footer{10-725 final project}
+\author{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Ben Eckart\inst{1}, Seth Flaxman\inst{2,3}, Antonio Juarez\inst{2}}
+\footer{Carnegie Mellon University: 10-725 final project}
+\institute{\inst{1} Robotics Institute\and %
+                      \inst{2} Machine Learning Department\and %
+                      \int{3} Heinz College}
+
 \date{}
 
 \begin{document}
@@ -27,7 +31,6 @@
 {\bf one million data points per second}.
 
 Standard optimization algorithms for real-time perception aren't adequate.
-
 \end{block}
 
 \begin{block}{Related Work: The Registration Problem}
@@ -42,6 +45,12 @@ Standard optimization algorithms for real-time perception aren't adequate.
 \includegraphics[width=10in]{register2D.png}
 \end{figure}
 
+\end{block}
+
+\begin{block}{Affiliations}
+1. Robotics Institute \\
+2. Machine Learning Department \\
+3. Heinz College
 \end{block}
 \end{textblock}
 
@@ -135,7 +144,7 @@ We generated artificial test data from a smooth distribution with several parame
 
 
 
-\begin{block}{Experimental Evaluation}
+\begin{block}{Results}
 \begin{figure}
 \includegraphics[width=8in]{likelihood.png}
 \end{figure}
