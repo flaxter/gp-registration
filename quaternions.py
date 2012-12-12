@@ -57,6 +57,13 @@ def transformPts(pts, rot=[5,-5,5], trans=[0.1,-.1,.1]):
     # transform sample by the unknown R, t
     pts2 = dot(rotQ(qReal), pts.T).T + tReal
     return pts2, tReal, qReal
+    
+def getQ(rot=[5,-5,5]):
+    qReal = Q.rotate('Z', vectors.radians(rot[2]))* \
+            Q.rotate('Y', vectors.radians(rot[1]))* \
+            Q.rotate('X', vectors.radians(rot[0]))
+    u, v, w, s = qReal
+    return array([s, u, v, w])
 
 def transformPtsQ(pts, q, t):  
     # transform sample by the unknown R, t

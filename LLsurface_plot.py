@@ -14,7 +14,7 @@ from vectors import M, Q
 
 from numpy import *
 
-from quaternions import rotQ
+from quaternions import rotQ, getQ
 
 def generate2(X, Y, phi=0):
     return X**2 + Y**2 
@@ -149,7 +149,71 @@ def animPoints():
                                  
             plt.draw()
     plt.show()
+    
+def getMSE(pts1, pts2):
+    err = 0
+    for pt1, pt2 in zip(pts1, pts2):
+        err += (pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2 + (pt1[2]-pt2[2])**2
+    return err/len(pts1)
+    
+def getFrobErr(R,t,R2,t2):
+    return sqrt(sum((R-R2)**2)) + sqrt(sum((t-t2)**2))
+
+from pylab import * 
+from pickle import load   
+def runTests():
+    
+    sigma=0.1
+    outF = open('convergenceDumpGP','r')
+    (tParams,resMSE,resFrob) = load(outF)
+    
+    print resMSE.shape
+    
+    mseLst = []
+    
+    N = 100
+    
+    for i, T in enumerate(tParams[:N]):
+        qReal = getQ(T[:3])
+        T_vector = T[3:]
+        X,y,pts,z = getSceneAndNew(T_vector=T_vector, 
+                                   qReal=qReal, n1=100, n2=20, 
+                                   sigma=sigma, generate=generate)
+        q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=50, beta=0.01, returnTraj=True)
+        
+        XYZ2 = transformPtsQ(concatenate((pts, atleast_2d(z).T), axis=1), q, t)
+        XYZ = concatenate((X, atleast_2d(y).T), axis=1)
+        
+        mse = getMSE(XYZ, XYZ2)
+        mseLst.append(mse)
+        #print mse, resMSE[0,i]
+        
+    mseLst = array(mseLst)
+    
+    print mseLst.shape, resMSE[:,:].shape
+        
+    mse = vstack((resMSE[:,:N], mseLst.reshape((1,len(mseLst)))))
+    
+    styles = ['r','g','b','k--.']
+    markers = ['x','o','+','^']
+    
+    figure()
+    
+    subplot(1,1,1)
+    for i in range(3):
+        if i == 1 or i == 2:
+            X = sorted(mse[i,:])
+            plot(X,[v/100. for v in arange(N)], styles[i], lw=7) # marker=markers[i], ms=5
+    title('Convergence Results for 100 Random Rigid Transformations')    
+    ylabel("p(MSE < x)")
+    xlabel("x")
+    legend(('icp','ours'), loc='lower right')
+           
+    show()        
+        
 
 if __name__ == '__main__':
-    LLsurface_plot(n1=500, n2=25)
+    #LLsurface_plot(n1=500, n2=25)
     #animPoints()
+    
+    runTests()
