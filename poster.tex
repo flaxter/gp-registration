@@ -9,7 +9,7 @@
 
 \title{Fast Point Cloud Registration using Gaussian Processes}
 \author{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Ben Eckart\inst{1}, Seth Flaxman\inst{2,3}, Antonio Juarez\inst{2}}
-\footer{Carnegie Mellon University: 10-725 final project}
+\footer{Carnegie Mellon University: 10-725 Optimization Final Project}
 \institute{\inst{1} Robotics Institute\and %
                       \inst{2} Machine Learning Department\and %
                       \int{3} Heinz College}
@@ -112,7 +112,7 @@ Note that this problem is not convex---in fact, the minimum we care about may {\
 
 \begin{block}{Gradient Descent}
 Partial derivatives must be found with respect to the 7 parameters of $T$. Each can be written in closed form,
-using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed relies on the {\bf Cholesky} decomposition.
+using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed relies on the {\bf Cholesky} decomposition. {\bf Backtracking line search} and {\bf acceleration} are natural extensions.
 \end{block}
 
 
