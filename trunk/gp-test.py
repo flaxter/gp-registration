@@ -143,7 +143,7 @@ if True:
             sigma=delta*10
 #            import code; code.interact(local=locals())
 	    
-            for beta in [0.0005,0.005,0.05,0.5,5]:
+            for beta in [0.001,0.01,0.1,1,10]:
             	q,t,l = gd(array(D[0:2]).T,D[2],array(TD[0:2]).T,TD[2],sigma=sigma,verbose=2,iterations=500,beta=beta)
 ##           Compare to T, evaluate accuracy
             print T

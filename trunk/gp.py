@@ -126,10 +126,14 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
     # alpha is (K + sigma^2 I)^-1 * y    
     
     Xnew = concatenate((pts, atleast_2d(z).T), axis=1)
-    
-    tx, ty, tz = 0.0,0.0,0.0
+    Ts=[]
+
+#    tx, ty, tz = concatenate([X,y],1).mean(axis=0)-concatenate([pts,z],1).mean(axis=0)
+    tx,ty,tz=0.0,0.0,0.0
     q = array([1.0,0.0,0.0,0.0])
-    
+
+    Ts.append((tx,ty,tz,q))
+
     LL_last = 99e9
 
     plotSteps=True
@@ -140,6 +144,9 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
         ion()
         fig=pl.figure()
         ax=Axes3D(fig)
+        ax.plot(X[:,0],X[:,1],y,'g.')
+        ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'b.')
+        pl.show()
 
     if verbose > 1:
         print 'translation offset\t negative log likelihood (should be minimized)'
@@ -290,10 +297,10 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
                                  LL)
         if plotSteps:
             ax.clear()
-            ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'g.')
+            ax.plot(X[:,0],X[:,1],y,'g.')
             ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'b.')
             ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
-            pl.draw()
+#            pl.draw()
 
 	if abs((LL-LL_last)/LL_last) < 1e-5: 
 	    break # or LL-LL_last > 0: break
@@ -306,6 +313,23 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005):
         print 'Stopped at iteration %d' % i
         print tx, ty, tz, likelihood
 
+    if plotSteps:
+        for i in range(len(Ts)):
+            T = Ts[i]
+            tx=T[0]
+            ty=T[1]
+            tz=T[2]
+            q=T[3]
+
+            Xnew_transformed = transformPtsQ(Xnew, q, array([tx,ty,tz]))
+            ax.clear()
+            ax.plot(X[:,0],X[:,1],y,'g.')
+            ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'b.')
+            ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
+            pl.draw()
+            import time
+            time.sleep(0.1)
+        time.sleep(10)
     return q, [tx, ty, tz], likelihood 
 
         
@@ -486,6 +510,15 @@ def test():
     X,y,pts,z = case2D(randPoints=True, plotIt=False, 
                        T_vector=T_vector, qReal=qReal, n1=1000, n2=200, 
                        sigma=sigma)
+#    X2,y2,pts2,z2 = case2D(randPoints=True, plotIt=False, 
+#                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
+#                       sigma=sigma)
+#    import numpy as np
+#    X=np.concatenate([X,X2],0)
+#    y=np.concatenate([y,y2],0)
+#    pts=np.concatenate([pts,pts2],0)
+#    z=np.concatenate([z,z2],0)
+
     #print X,y,pts,z
     #exit()
     q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250, beta=0.005)
