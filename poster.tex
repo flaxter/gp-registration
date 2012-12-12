@@ -96,8 +96,12 @@ Given two consecutive frames of 3D cloud datasets, we aim to find the most likel
 Given a scene and a set of new points, find a rigid transformation $T = [T_x,T_y,T_z,q]$ of the new points 
 that maximizes their likelihood in the original scene, which is fit with a GP:
 $$\min -\log\mathcal{L}(T|x,y,z,x_*,y_*,z_*) =$$
-$$ \min \log|\Sigma| + (T(z_*) - \mu)^T \Sigma^{-1} (T(z_*) - \mu)$$
-(where $T([x,y,z]^T) = R(q)[x,y,z]^T + [T_x,T_y,T_z]^T$).
+$$ \min \log|\widetilde{\Sigma}| + (\widetilde{z_*} - \widetilde{\mu})^T \widetilde{\Sigma}^{-1} (\widetilde{z_*} - \widetilde{\mu})$$
+(where $\widetilde{Q}$ denotes $Q$ is a function of $T$).
+
+%$$\min -\log\mathcal{L}(T|x,y,z,x_*,y_*,z_*) =$$
+%$$ \min \log|\Sigma| + (T(z_*) - \mu)^T \Sigma^{-1} (T(z_*) - \mu)$$
+%(where $T([x,y,z]^T) = R(q)[x,y,z]^T + [T_x,T_y,T_z]^T$).
 
 \end{block}
 
@@ -107,7 +111,7 @@ Our parameter search space (parameters of T) is 7-D.
 \vspace{-.1in}
 \begin{figure}
 \includegraphics[width=10in]{LLmap3.pdf}
-\caption{2-D Projection of the likelihood}
+\caption{2-D Projection of the likelihood along $t_y$ and $\theta_z$}
 \end{figure}
 Note that this problem is not convex; the minimum we care about may {\bf not} be the global minimum. 
 \end{block}
