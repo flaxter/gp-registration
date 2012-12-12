@@ -96,7 +96,7 @@ Given two consecutive frames of 3D cloud datasets, we aim to find the most likel
 Given a scene and a set of new points, find a rigid transformation $T = [T_x,T_y,T_z,q]$ of the new points 
 that maximizes their likelihood in the original scene, which is fit with a GP:
 $$\min -\log\mathcal{L}(T|x,y,z,x_*,y_*,z_*) =$$
-$$ \min \log|\Sigma| + (z_* - \mu)^T \Sigma^{-1} (z_* - \mu)$$
+$$ \min \log|\Sigma| + (T(z_*) - \mu)^T \Sigma^{-1} (T(z_*) - \mu)$$
 (where $T([x,y,z]^T) = R(q)[x,y,z]^T + [T_x,T_y,T_z]^T$).
 
 \end{block}
