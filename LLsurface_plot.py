@@ -253,6 +253,7 @@ def runScalingTests():
     
     errorbar(N[:stopN], t1[:stopN], yerr=dev[:stopN], linewidth=6, elinewidth=1)
     errorbar(N[:stopN], t2[:stopN], yerr=err[:stopN], linewidth=6, elinewidth=1)
+    title('Timing Results')    
     xlabel('Number of Points')
     ylabel('Time until Convergence (s)')
     legend(['icp', 'gp'], loc='best') #, 'emicp-openmp', 'emicp-gpu', 'softassign'])
@@ -264,5 +265,5 @@ if __name__ == '__main__':
     #LLsurface_plot(n1=500, n2=25)
     #animPoints()
     
-    runTests()
-    #runScalingTests()
+    #runTests()
+    runScalingTests()
