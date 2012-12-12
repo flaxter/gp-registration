@@ -131,34 +131,31 @@ using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed 
 \end{textblock}
 \begin{textblock}{27}(91,5)
 
-\begin{block}{Experiments}
-We generated artificial test data from a smooth distribution with several parameters:
-\begin{itemize}
-\item Dataset size (n = 100-2000 points)
-\item Rigid transformations between datasets
-\end{itemize}
-\includegraphics[width=5in]{DistributionPlusPoints.png}
-\includegraphics[width=5in]{Reconstruction.png}
+\begin{block}{Experiments and Comparisons with ICP}
+To compare our method with ICP, we generated artificial test data from a smooth distribution.
 
+%\includegraphics[width=5in]{DistributionPlusPoints.png}
+%\includegraphics[width=5in]{Reconstruction.png}
+
+%\begin{block}{Results}
+%\begin{figure}
+%\includegraphics[width=8in]{likelihood.png}
+%\end{figure}
+%\end{block}
+
+
+%\begin{block}{Comparison with Other Methods}
+
+To test convergence, we applied 100 different random rigid transformations to the test data and used both ICP and GP to recover the transformation parameters. We then recorded the mean-squared error (MSE) between the original and transformed scene.
+
+\includegraphics[width=10in]{convergence2.pdf}
+
+CDF of MSE values. Our method on average provides better convergence than ICP.
+
+\includegraphics[width=10in]{scaling2.pdf}
 \end{block}
 
-
-
-
-
-\begin{block}{Results}
-\begin{figure}
-\includegraphics[width=8in]{likelihood.png}
-\end{figure}
-\end{block}
-
-
-\begin{block}{Comparison with Other Methods}
-Our method outperforms ICP by x% convergence rate, and is y% faster.
-
-\includegraphics[width=5in]{convergence2.pdf}
-\includegraphics[width=5in]{scaling2.pdf}
-\end{block}
+Scaling as the number of points in the cloud increase. Our method adds a minimal amount of overhead over ICP.
 
 \begin{block}{Conclusions}
 \begin{itemize}
