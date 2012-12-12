@@ -47,41 +47,18 @@ Standard optimization algorithms for real-time perception aren't adequate.
 \begin{textblock}{27.5}(30.8,5)
 \begin{block}{Gaussian Processes (GPs)}
 A distribution over functions, fully specified by a mean and a covariance:
-$f \sim \mathcal{GP}(m,k)$. Given a set of points $(X,y)$ and a new point $X_*$ for which we want to predict $y_*$, 
-distribution is simple: {\bf multivariate Gaussian} with:
+$f \sim \mathcal{GP}(m,k)$. Given a set of points $(x,y,z)$ and a new point $(x_*,y_*)$ for which we want to predict $z_*$, 
+distribution is simply: {\bf multivariate Gaussian} with:
 $$\mu = K_* (K + \sigma^2 I)^{-1}y$$
 $$\Sigma = K_{**} - K_* (K + \sigma^2 I)^{-1} K_*^T$$
 \end{block}
 
-\begin{block}{Formulating Registration as an Optimization Problem}
-Given a scene and a set of new points, find a rigid transformation $T = [T_x,T_y,T_z,T_s,T_u,T_v,T_w]$ of the new points 
-that maximizes their likelihood in the original scene, where the original scene is fit with a GP:
-$$min -\ell(T|X,y,X_*,y_*) =$$
-$$ \ln|\Sigma| + (T(X_*) - \mu)^T \Sigma^{-1} (T(X_*) - \mu)$$
-
-Note that this problem is not convex---in fact, the minimum we care about may {\bf not} be the global minimum. 
-\end{block}
-\begin{block}{Gradient Descent}
-Partial derivatives must be found with respect to the 7 parameters of $T$. Each can be written in closed form,
-using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed relies on the {\bf Cholesky} decomposition.
-\end{block}
-
-\begin{block}{Experimental Evaluation}
-\begin{figure}
-\includegraphics[width=8in]{likelihood.png}
-\caption{Convergence}
-\end{figure}
-
-\end{block}
-
-\end{textblock}
-
-\begin{textblock}{27}(61,5)
-
 \begin{block}{3D Model}
-Dataset: A cloud of 3-D points
-Representation: An elevation map (X,Y) $\rightarrow$ Z
-The Gaussian Process induces a probability distribution on the elevation of every (X,Y)
+{\bf Dataset}: A cloud of 3-D points
+
+{\bf Representation}: An elevation map (x,y) $\rightarrow$ z
+
+The Gaussian Process induces a probability distribution on the elevation of every (x,y)
 
 \includegraphics[width=5in]{1DGaussianProcess.png}
 \includegraphics[width=5in]{2DGaussianProcess.png}
@@ -97,27 +74,70 @@ Given two consecutive frames of 3D cloud datasets, we aim to find the most likel
 \includegraphics[width=10in]{3DWorldModel.png}
 \end{block}
 
+\end{textblock}
+
+\begin{textblock}{27}(61,5)
+
+
+
+
+\begin{block}{Formulating Registration as an Optimization Problem}
+Given a scene and a set of new points, find a rigid transformation $T = [T_x,T_y,T_z,T_s,T_u,T_v,T_w]$ of the new points 
+that maximizes their likelihood in the original scene, where the original scene is fit with a GP:
+$$min -\ell(T|x,y,z,x_*,y_*,z_*) =$$
+$$ \ln|\Sigma| + (T(x_*) - \mu)^T \Sigma^{-1} (T(x_*) - \mu)$$
+
+\end{block}
+
+
+\begin{block}{Parameter space}
+Our parameter search space (parameters of T) is 7-D.
+\begin{figure}
+\includegraphics[width=10in]{LLProjection.png}
+\caption{2-D Projection of the likelihood}
+\end{figure}
+Note that this problem is not convex---in fact, the minimum we care about may {\bf not} be the global minimum. 
+\end{block}
+
+\begin{block}{Gradient Descent}
+Partial derivatives must be found with respect to the 7 parameters of $T$. Each can be written in closed form,
+using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed relies on the {\bf Cholesky} decomposition.
+\end{block}
+
+
+\begin{block}{References}
+{
+ \bibliographystyle{abbrv}
+ \bibliography{cmubib}
+}
+\end{block}
+
+
+\end{textblock}
+\begin{textblock}{27}(91,5)
+
 \begin{block}{Experiments}
 We generated artificial test data from a smooth distribution with several parameters:
-\begin{enumerate}
+\begin{itemize}
 \item Dataset size (100-2000)
 \item Rigid transformations between datasets
-\end{enumerate}
+\end{itemize}
 \includegraphics[width=5in]{DistributionPlusPoints.png}
 \includegraphics[width=5in]{Reconstruction.png}
 (This second plot should be the reconstruction of the figure on the left)
 \end{block}
 
-\end{textblock}
 
 
-\begin{textblock}{27}(91,5)
 
-\begin{block}{Parameter space}
-Our parameter search space is 7-D ([Tx,Ty,Tz],RotationQuaternion)
-A figure of the likelihood space on a 2-D projection of this space follows:
-\includegraphics[width=10in]{LLProjection.png}
+
+\begin{block}{Experimental Evaluation}
+\begin{figure}
+\includegraphics[width=8in]{likelihood.png}
+\caption{Convergence}
+\end{figure}
 \end{block}
+
 
 \begin{block}{Comparison with other methods}
 Our method outperforms ICP by x% convergence rate, and is y% faster.
@@ -135,12 +155,6 @@ Our method outperforms ICP by x% convergence rate, and is y% faster.
 \end{itemize}
 \end{block}
 
-\begin{block}{References}
-{
- \bibliographystyle{abbrv}
- \bibliography{cmubib}
-}
-\end{block}
 
 \end{textblock}
 
