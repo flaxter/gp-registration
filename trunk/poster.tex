@@ -34,8 +34,7 @@ Standard optimization algorithms for real-time perception aren't adequate.
 
 {\bf Iterative Closest Point (ICP) algorithm \cite{besl_method_1992}} 
 \begin{figure}
-\includegraphics[width=10in]{icpCpp.jpg}
-\caption{Photo from Per Bergstr�m via MATLAB FileExchange}
+\includegraphics[width=10in]{ICP.pdf}
 \end{figure}
 
 {\bf Gaussian Mixture Models (GMM) \cite{jian_robust_5555}}
@@ -68,7 +67,7 @@ The Gaussian Process induces a probability distribution on the elevation of ever
 
 \end{block}
 
-\begin{block}{Estimating orientation}
+\begin{block}{Estimating The Transformation}
 Given two consecutive frames of 3D cloud datasets, we aim to find the most likely rigid transformation that converted the first into the second.
 
 \textbf{Input:} Two consecutive 3D datasets
@@ -110,6 +109,7 @@ using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed 
 
 \begin{block}{References}
 {
+\footnotesize
 \bibliographystyle{plain}
 % argument is your BibTeX string definitions and bibliography database(s)
 \bibliography{./full}
@@ -151,9 +151,10 @@ Our method outperforms ICP by x% convergence rate, and is y% faster.
 
 \begin{block}{Conclusions}
 \begin{itemize}
-\item Gaussian Processes can represent and recover the orientation of a 3D scene
+\item Gaussian Processes can represent and recover the transformation of a 3D scene
 \item The convergence rate and speed of Gaussian Processes outperforms ICP
-\item Robustness still needs work - extensible to a mapping from 3D vectors into a probability or density space.
+\item Robustness still needs work: much better performance with small transformations
+\item Currently only handles elevation data: general 3D point clouds require modeling density
 \item Newton's method is a straightforward extension, given derivation of Hessian
 \end{itemize}
 \end{block}
