@@ -66,7 +66,6 @@ The Gaussian Process induces a probability distribution on the elevation of ever
 \includegraphics[width=5.0in]{2DGaussianProcess1.pdf}
 \includegraphics[width=5.0in]{2DGaussianProcess2.pdf}
 
-(The plot on the right should display the 2-D equivalent of the Gaussian Process displayed on the left)
 \end{block}
 
 \begin{block}{Estimating orientation}
@@ -124,13 +123,12 @@ using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed 
 \begin{block}{Experiments}
 We generated artificial test data from a smooth distribution with several parameters:
 \begin{itemize}
-\item Dataset size (100-2000)
+\item Dataset size (n = 100-2000 points)
 \item Rigid transformations between datasets
 \end{itemize}
 \includegraphics[width=5in]{DistributionPlusPoints.png}
 \includegraphics[width=5in]{Reconstruction.png}
 
-(This second plot should be the reconstruction of the figure on the left)
 \end{block}
 
 
@@ -140,7 +138,6 @@ We generated artificial test data from a smooth distribution with several parame
 \begin{block}{Experimental Evaluation}
 \begin{figure}
 \includegraphics[width=8in]{likelihood.png}
-\caption{Convergence}
 \end{figure}
 \end{block}
 
@@ -157,7 +154,7 @@ Our method outperforms ICP by x% convergence rate, and is y% faster.
 \item Gaussian Processes can represent and recover the orientation of a 3D scene
 \item The convergence rate and speed of Gaussian Processes outperforms ICP
 \item Robustness still needs work - extensible to a mapping from 3D vectors into a probability or density space.
-\item Numerical estimation of the Hessian at each step also works...???
+\item Newton's method is a straightforward extension, given derivation of Hessian
 \end{itemize}
 \end{block}
 
