@@ -1,5 +1,7 @@
 \documentclass[final]{beamer}
+
 \usetheme{RJH}
+\setbeamertemplate{bibliography item}[text]
 \usepackage[orientation=landscape,size=a0,scale=1.4,debug]{beamerposter}
 \usepackage[absolute,overlay]{textpos}
 \setlength{\TPHorizModule}{1cm}
@@ -30,13 +32,13 @@ Standard optimization algorithms for real-time perception aren't adequate.
 
 \begin{block}{Related Work: The Registration Problem}
 
-{\bf Iterative Closest Point (ICP) algorithm} 
+{\bf Iterative Closest Point (ICP) algorithm \cite{besl_method_1992}} 
 \begin{figure}
 \includegraphics[width=10in]{icpCpp.jpg}
 \caption{Photo from Per Bergstr�m via MATLAB FileExchange}
 \end{figure}
 
-{\bf Gaussian Mixture Models (GMM)}
+{\bf Gaussian Mixture Models (GMM) \cite{jian_robust_5555}}
 \begin{figure}
 \includegraphics[width=10in]{register2D.png}
 \end{figure}
@@ -47,8 +49,8 @@ Standard optimization algorithms for real-time perception aren't adequate.
 \begin{textblock}{27.5}(30.8,5)
 \begin{block}{Gaussian Processes (GPs)}
 A distribution over functions, fully specified by a mean and a covariance:
-$f \sim \mathcal{GP}(m,k)$. Given a set of points $(x,y,z)$ and a new point $(x_*,y_*)$ for which we want to predict $z_*$, 
-distribution is simply: {\bf multivariate Gaussian} with:
+$f \sim \mathcal{GP}(m,k)$ \cite{rasmussen2006gaussian}. Given a set of points $(x,y,z)$ and a new point $(x_*,y_*)$ for which we want to predict $z_*$, 
+distribution is simply {\bf multivariate Gaussian} with:
 $$\mu = K_* (K + \sigma^2 I)^{-1}y$$
 $$\Sigma = K_{**} - K_* (K + \sigma^2 I)^{-1} K_*^T$$
 \end{block}
@@ -109,8 +111,9 @@ using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed 
 
 \begin{block}{References}
 {
- \bibliographystyle{abbrv}
- \bibliography{cmubib}
+\bibliographystyle{plain}
+% argument is your BibTeX string definitions and bibliography database(s)
+\bibliography{./full}
 }
 \end{block}
 
