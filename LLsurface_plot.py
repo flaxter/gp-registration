@@ -207,13 +207,59 @@ def runTests():
     title('Convergence Results for 100 Random Rigid Transformations')    
     ylabel("p(MSE < x)")
     xlabel("x")
-    legend(('icp','ours'), loc='lower right')
+    legend(('icp','gp'), loc='lower right')
            
-    show()        
+    show()  
+    
+def avg(lst): return 1.0*sum(lst)/len(lst)
+
+def stddev(lst): 
+    a = avg(lst)
+    return sqrt(sum([(x-a)**2 for x in lst]))   
+    
+def runScalingTests():
+    outF = open('scalingDumpGP','r')
+    (tParams,rr, N, t1, dev) = load(outF)
+    
+    sigma = 0.1
+    
+    t2 = []
+    err = []
+    
+    stopN = 20
+    
+    for nPts in N[:stopN]:
+        tt2 = []
+        for i, T in enumerate(tParams[:3]):
+            
+            qReal = getQ(T[:3])
+            T_vector = T[3:]
+            X,y,pts,z = getSceneAndNew(T_vector=T_vector, 
+                                       qReal=qReal, n1=nPts*.2, n2=20, 
+                                       sigma=sigma, generate=generate)
+            st = time.time()
+            q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=10, beta=0.01, returnTraj=True)  
+            tt = time.time() - st
+            
+            print nPts, tt
+            tt2.append(tt)
+        t2.append(avg(tt2))
+        err.append(stddev(tt2))
+            
+    print len(t), len(t2), len(N)
+    
+    
+    errorbar(N[:stopN], t1[:stopN], yerr=dev[:stopN], linewidth=6, elinewidth=1)
+    errorbar(N[:stopN], t2[:stopN], yerr=err[:stopN], linewidth=6, elinewidth=1)
+    xlabel('Number of Points')
+    ylabel('Time until Convergence (s)')
+    legend(['icp', 'gp'], loc='best') #, 'emicp-openmp', 'emicp-gpu', 'softassign'])
+    show()   
         
 
 if __name__ == '__main__':
     #LLsurface_plot(n1=500, n2=25)
     #animPoints()
     
-    runTests()
+    #runTests()
+    runScalingTests()
