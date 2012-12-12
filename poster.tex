@@ -59,7 +59,7 @@ Standard optimization algorithms for real-time perception aren't adequate.
 A distribution over functions, fully specified by a mean and a covariance:
 $f \sim \mathcal{GP}(m,k)$ \cite{rasmussen2006gaussian}. Given a set of points $(x,y,z)$ and a new point $(x_*,y_*)$ for which we want to predict $z_*$, 
 distribution is simply {\bf multivariate Gaussian} with:
-$$\mu = K_* (K + \sigma^2 I)^{-1}y$$
+$$\mu = K_* (K + \sigma^2 I)^{-1}z$$
 $$\Sigma = K_{**} - K_* (K + \sigma^2 I)^{-1} K_*^T$$
 \end{block}
 
@@ -94,9 +94,10 @@ Given two consecutive frames of 3D cloud datasets, we aim to find the most likel
 
 \begin{block}{Formulating Registration as an Optimization Problem}
 Given a scene and a set of new points, find a rigid transformation $T = [T_x,T_y,T_z,T_s,T_u,T_v,T_w]$ of the new points 
-that maximizes their likelihood in the original scene, where the original scene is fit with a GP:
+that maximizes their likelihood in the original scene, which is fit with a GP:
 $$min -\ell(T|x,y,z,x_*,y_*,z_*) =$$
-$$ \ln|\Sigma| + (T(x_*) - \mu)^T \Sigma^{-1} (T(x_*) - \mu)$$
+$$ \ln|\Sigma| + (T(x_*,y_*) - \mu)^T \Sigma^{-1} (T(x_*,y_*) - \mu)$$
+(where $[x_*,y_*,z_*]^T = R(q)[x,y,z]^T + [T_x,T_y,T_z]^T$).
 
 \end{block}
 
