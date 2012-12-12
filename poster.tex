@@ -114,7 +114,7 @@ Note that this problem is not convex; the minimum we care about may {\bf not} be
 
 \begin{block}{Gradient Descent}
 Partial derivatives must be found with respect to the 7 parameters of $T$. Each can be written in closed form,
-using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed relies on the {\bf Cholesky} decomposition. {\bf Backtracking line search} and {\bf acceleration} are natural extensions.
+using {\bf matrix} and {\bf quaternion} calculus. Numerical stability and speed relies on the {\bf Cholesky} decomposition. We used {\bf backtracking line search} to find an appropriate step size. {\bf Acceleration} is a natural extension.
 \end{block}
 
 
@@ -146,16 +146,23 @@ To compare our method with ICP, we generated artificial test data from a smooth 
 
 %\begin{block}{Comparison with Other Methods}
 
-To test convergence, we applied 100 different random rigid transformations to the test data and used both ICP and GP to recover the transformation parameters. We then recorded the mean-squared error (MSE) between the original and transformed scene.
 
-\includegraphics[width=10in]{convergence2.pdf}
+\begin{center}
+\includegraphics[width=8.5in]{convergence2.pdf}
+\end{center}
 
-CDF of MSE values. Our method on average provides better convergence than ICP.
 
-\includegraphics[width=10in]{scaling2.pdf}
+To test convergence, we applied many random rigid transformations to the test data. We then recorded the mean-squared error (MSE) between the original and transformed scene. Above is a CDF of MSE values. Our method on average provides better convergence than ICP.
+
+\begin{center}
+\includegraphics[width=8.5in]{scaling2.pdf}
+\end{center}
+
+The above figure shows how the algorithms scale with time as the number of points in the cloud increase. Our method adds a minimal amount of overhead over ICP.
+
 \end{block}
 
-Scaling as the number of points in the cloud increase. Our method adds a minimal amount of overhead over ICP.
+
 
 \begin{block}{Conclusions}
 \begin{itemize}
