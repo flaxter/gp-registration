@@ -85,6 +85,7 @@ The Gaussian Process induces a probability distribution on the elevation of ever
 
 \includegraphics[width=5in]{1DGaussianProcess.png}
 \includegraphics[width=5in]{2DGaussianProcess.png}
+(The plot on the right should display the 2-D equivalent of the Gaussian Process displayed on the left)
 \end{block}
 
 \begin{block}{Estimating orientation}
@@ -97,13 +98,14 @@ Given two consecutive frames of 3D cloud datasets, we aim to find the most likel
 \end{block}
 
 \begin{block}{Experiments}
-We generated test data from a smooth distribution with several parameters:
+We generated artificial test data from a smooth distribution with several parameters:
 \begin{enumerate}
 \item Dataset size (100-2000)
-\item Magnitude of transformation between datasets
+\item Rigid transformations between datasets
 \end{enumerate}
 \includegraphics[width=5in]{DistributionPlusPoints.png}
 \includegraphics[width=5in]{Reconstruction.png}
+(This second plot should be the reconstruction of the figure on the left)
 \end{block}
 
 \end{textblock}
@@ -120,16 +122,16 @@ A figure of the likelihood space on a 2-D projection of this space follows:
 \begin{block}{Comparison with other methods}
 Our method outperforms ICP by x% convergence rate, and is y% faster.
 
-\includegraphics[width=10in]{ConvergenceComparison.png}
-\includegraphics[width=10in]{SpeedComparison.png}
+\includegraphics[width=5in]{ConvergenceComparison.png}
+\includegraphics[width=5in]{SpeedComparison.png}
 \end{block}
 
 \begin{block}{Conclusions}
 \begin{itemize}
-\item dunno yet
-\item but i'll
-\item figure it
-\item out
+\item Gaussian Processes can represent and recover the orientation of a 3D scene
+\item The convergence rate and speed of Gaussian Processes outperforms ICP
+\item Robustness still needs work - extensible to a mapping from 3D vectors into a probability or density space.
+\item Numerical estimation of the Hessian at each step also works...???
 \end{itemize}
 \end{block}
 
