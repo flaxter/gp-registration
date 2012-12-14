@@ -171,7 +171,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         # v^T v = (L^-1 Kstar)^T (L^-1 Kstar) = kstar^T (K + sigma^2 I)^-1 kstar
         var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(Kstarstar.shape[0])
         
-        gr = 0
+        '''gr = 0
         for i, (pti, pt_ti, z_ti) in enumerate(zip(Xnew, pts, z)):
             meani = mean[i]
             vari = var[i,i]
@@ -199,7 +199,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             total_gradient += (vari**-1) * (meani - z_ti) * (dmu - grad_z)
             gr += total_gradient
  
-        gr = gr / Xnew.shape[0]
+        gr = gr / Xnew.shape[0]'''
             
         
         Lvar = cholesky(var)
@@ -303,10 +303,9 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
                 mean, var = gp_chol(X, y, pts, sigma=sigma)
             return getLogL_chol(mean, var, z)
 
-        delta = 1e-8
+        '''delta = 1e-8
         cache = gp_bootstrap(X,y,sigma)
         l = check_likelihood(Xnew, cache=cache)
-
         gr = gr[0,:]
         print "x %.05f vs %.05f vs %.05f"%(dx,(check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta, gr[0])
         print "y %.05f vs %.05f vs %.05f"%(dy,(check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta, gr[1])
@@ -315,19 +314,15 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         print "u %.05f vs %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta, cache=cache) - l) / delta, gr[4])
         print "v %.05f vs %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta, cache=cache) - l) / delta, gr[5])
         print "w %.05f vs %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta, cache=cache) - l) / delta, gr[6])
-	#import code; code.interact(local=locals())
 
         dsn = (check_likelihood(sss=-1 * delta, cache=cache) - l) / delta
         dun= (check_likelihood(u=-1 * delta, cache=cache) - l) / delta
         dvn= (check_likelihood(v=-1 * delta, cache=cache) - l) / delta
         dwn= (check_likelihood(w=-1 * delta, cache=cache) - l) / delta
 
-	print "matrix\t", normalizeQ(q - array([ds,du,dv,dw]))
-	print "numeric\t", normalizeQ(q - array([dsn,dun,dvn,dwn]))
-	print "single\t", normalizeQ(q - array([gr[3],gr[4],gr[5],gr[6]]))
-        raw_input()
+        raw_input()'''
             
-        
+        '''
         import numpy as np
 
         dx_ = (check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta
@@ -338,7 +333,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         du_ = (check_likelihood(u=-1 * delta, cache=cache) - l) / delta
         dv_ = (check_likelihood(v=-1 * delta, cache=cache) - l) / delta
         dw_ = (check_likelihood(w=-1 * delta, cache=cache) - l) / delta
-        #print normalizeQ(array([ds, du, dv, dw]))
+        #print normalizeQ(array([ds, du, dv, dw]))'''
         
         if False:
             Hess = np.zeros([7,7],float)
@@ -361,20 +356,20 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
         stepQ = stepChange_q*array([ds, du, dv, dw]) 
         
-        stepX_, stepY_, stepZ_ = stepChange_t*array([dx_, dy_, dz_])
+        '''stepX_, stepY_, stepZ_ = stepChange_t*array([dx_, dy_, dz_])
         stepQ_ = stepChange_q*array([ds_, du_, dv_, dw_]) 
         
         tx2 = tx - stepX_
         ty2 = ty - stepY_
         tz2 = tz - stepZ_
-        q2 = normalizeQ(q - stepQ_)      
+        q2 = normalizeQ(q - stepQ_)    '''  
         
         tx -= stepX
         ty -= stepY
         tz -= stepZ
         q = normalizeQ(q - stepQ) 
      
-        
+        '''
         print 'tx', tx, tx2
         print 'ty', ty, ty2
         print 'tz', tz, tz2
@@ -384,7 +379,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         print 'w1', q[3], q2[3]
         
         if numerical:
-            tx, ty, tz, q = tx2, ty2, tz2, q2
+            tx, ty, tz, q = tx2, ty2, tz2, q2'''
                
         Ts.append([tx, ty, tz, q])
         

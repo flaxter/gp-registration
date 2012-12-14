@@ -1,5 +1,5 @@
 \documentclass{article} % For LaTeX2e
-\usepackage{nips12submit_e,times,soul,amsmath,graphicx}
+\usepackage{nips12submit_e,times,soul,amsmath,graphicx,caption,subcaption}
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
 
 
@@ -291,11 +291,63 @@ Again, this depends on the choice of kernel. Derivations with $T_z$ are similar 
 %\caption{Sample figure caption.}
 %\end{figure}
 
+ 
+\begin{figure}
+        \centering
+        \begin{subfigure}[b]{0.5\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{LL.pdf}
+                \caption{Convergence rate }
+                \label{fig:elevation}
+        \end{subfigure}%
+        ~ %add desired spacing between images, e. g. ~, \quad, \qquad etc. 
+          %(or a blank line to force the subfigure onto a new line)
+        \begin{subfigure}[b]{0.5\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{scaling3.pdf}
+                \caption{Time until convergence for different $N_1$}
+                \label{fig:mean}
+        \end{subfigure}
+        \caption{Summary here...}\label{fig:GP}
+\end{figure}
+
+\begin{figure}
+        \centering
+        \begin{subfigure}[b]{0.5\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{2DGaussianProcess1.pdf}
+                \caption{Simulated elevation map with sampled points.}
+                \label{fig:elevation}
+        \end{subfigure}%
+        ~ %add desired spacing between images, e. g. ~, \quad, \qquad etc. 
+          %(or a blank line to force the subfigure onto a new line)
+        \begin{subfigure}[b]{0.5\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{2DGaussianProcess2.pdf}
+                \caption{Reconstructed mean surface from a grid of $X'$}
+                \label{fig:mean}
+        \end{subfigure}
+        \caption{The left shows a real surface with samples drawn from it, representing $\mathbf{X}$. The right shows the mean construction using a grid of points, $\mathbf{X'}$}\label{fig:GP}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=5in]{goodnessoffit2.pdf}
+\end{center}
+\caption{Goodness of fit results for 100 random $T$.}
+\label{figure:mse}
+\end{figure}
+
 
 
 \section{Experimental Setup}
 
+For the following experiments, we generated simulated elevation data. An example elevation map can be seen in Figure \ref{fig:elevation}.
+
+
 \section{Results}
+
+ICP converges faster, but often to a poorer local minimum.
 
 \section{Conclusion}
 
@@ -307,7 +359,9 @@ Again, this depends on the choice of kernel. Derivations with $T_z$ are similar 
 \section{Appendix}
 
 \begin{figure}
-\includegraphics[width=7in]{LLmap3.pdf}
+\begin{center}
+\includegraphics[width=6in]{LLmap3.pdf}
+\end{center}
 \caption{2-D Projection of the likelihood along $t_y$ and $\theta_z$}
 \label{figure:likelihood}
 \end{figure}

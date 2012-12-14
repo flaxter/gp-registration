@@ -163,7 +163,7 @@ def getFrobErr(R,t,R2,t2):
 from pylab import * 
 from pickle import load   
 def runTests():
-    matplotlib.rcParams.update({'font.size': 24})
+    matplotlib.rcParams.update({'font.size': 16})
     sigma=0.1
     outF = open('convergenceDumpGP','r')
     (tParams,resMSE,resFrob) = load(outF)
@@ -200,15 +200,26 @@ def runTests():
     
     figure()
     
-    subplot(1,1,1)
+    '''hist(mse[1:3,:].T)
+    legend(['ICP','GP'])'''
+    #title('Convergence Results')    
+    color = ['b','g','r']
+    legendLbl = ['','ICP','GP']
+    
     for i in range(3):
         if i == 1 or i == 2:
-            X = sorted(mse[i,:])
-            plot(X,[v/100. for v in arange(N)], styles[i], lw=7) # marker=markers[i], ms=5
-    title('Convergence Results')    
-    ylabel("p(MSE < x)")
-    xlabel("x")
-    legend(('icp','gp'), loc='lower right')
+            subplot(1,2,i)
+            hist(mse[i,:], color=color[i], bins=arange(0,5.0,0.35))
+            ylim(0,100.0)
+            xlabel("Mean Squared Error (MSE)")
+            if i==1: ylabel("Frequency (out of 100)")
+            legend([legendLbl[i]], loc='upper right')
+            #X = sorted(mse[i,:])
+            #plot(X,[v/100. for v in arange(N)], styles[i], lw=7) # marker=markers[i], ms=5
+    
+    #ylabel("p(MSE < x)")
+    
+    
            
     show()  
     
@@ -219,7 +230,7 @@ def stddev(lst):
     return sqrt(sum([(x-a)**2 for x in lst]))   
     
 def runScalingTests():
-    matplotlib.rcParams.update({'font.size': 24})
+    matplotlib.rcParams.update({'font.size': 16})
     outF = open('scalingDumpGP','r')
     (tParams,rr, N, t1, dev) = load(outF)
     
@@ -237,10 +248,10 @@ def runScalingTests():
             qReal = getQ(T[:3])
             T_vector = T[3:]
             X,y,pts,z = getSceneAndNew(T_vector=T_vector, 
-                                       qReal=qReal, n1=nPts*.2, n2=20, 
+                                       qReal=qReal, n1=nPts*.25, n2=20, 
                                        sigma=sigma, generate=generate)
             st = time.time()
-            q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=10, beta=0.01, returnTraj=True)  
+            q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=15, beta=0.01, returnTraj=True)  
             tt = time.time() - st
             
             print nPts, tt
@@ -253,7 +264,7 @@ def runScalingTests():
     
     errorbar(N[:stopN], t1[:stopN], yerr=dev[:stopN], linewidth=6, elinewidth=1)
     errorbar(N[:stopN], t2[:stopN], yerr=err[:stopN], linewidth=6, elinewidth=1)
-    title('Timing Results')    
+    #title('Convergence')    
     xlabel('Number of Points')
     ylabel('Time until Convergence (s)')
     legend(['icp', 'gp'], loc='best') #, 'emicp-openmp', 'emicp-gpu', 'softassign'])
@@ -263,7 +274,7 @@ def runScalingTests():
 
 if __name__ == '__main__':
     #LLsurface_plot(n1=500, n2=25)
-    animPoints()
+    #animPoints()
     
-    #runTests()
+    runTests()
     #runScalingTests()
