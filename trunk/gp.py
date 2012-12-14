@@ -144,6 +144,9 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
     #tx, ty, tz = concatenate([X,y],1).mean(axis=0)-concatenate([pts,z],1).mean(axis=0)
     tx,ty,tz=0.0,0.0,0.0
     q = array([1.0,0.0,0.0,0.0])
+    
+    tx2,ty2,tz2=0.0,0.0,0.0
+    q2 = array([1.0,0.0,0.0,0.0])
 
     Ts.append((tx,ty,tz,q))
 
@@ -167,14 +170,11 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         
         # v^T v = (L^-1 Kstar)^T (L^-1 Kstar) = kstar^T (K + sigma^2 I)^-1 kstar
         var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(Kstarstar.shape[0])
-        #var = -dot(v.T,v) + (1.0+sigma**2)*eye(Kstarstar.shape[0])
         
         gr = 0
         for i, (pti, pt_ti, z_ti) in enumerate(zip(Xnew, pts, z)):
             meani = mean[i]
             vari = var[i,i]
-            
-            print pti, meani, vari
             
             kstar = getK(X, [pt_ti])
 
@@ -196,7 +196,6 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             dvar = -2.0*dot(v1.T,v2)
              
             total_gradient = dvar*(.5*(vari**-1) - 0.5*(vari**-2) * (meani - z_ti)**2)
-            print total_gradient
             total_gradient += (vari**-1) * (meani - z_ti) * (dmu - grad_z)
             gr += total_gradient
  
@@ -226,10 +225,6 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         dCov_u = dKstarstar_du - dot(v.T, v_dKstar_u) - dot(v_dKstar_u.T, v)
         dCov_v = dKstarstar_dv - dot(v.T, v_dKstar_v) - dot(v_dKstar_v.T, v)
         dCov_w = dKstarstar_dw - dot(v.T, v_dKstar_w) - dot(v_dKstar_w.T, v)
-        '''dCov_s = -dot(v.T, v_dKstar_s) - dot(v_dKstar_s.T, v)
-        dCov_u = -dot(v.T, v_dKstar_u) - dot(v_dKstar_u.T, v)
-        dCov_v = -dot(v.T, v_dKstar_v) - dot(v_dKstar_v.T, v)
-        dCov_w = -dot(v.T, v_dKstar_w) - dot(v_dKstar_w.T, v)'''
         
         
         # (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1)
@@ -244,7 +239,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         dx = -0.5*trace(Dx) 
         dy = -0.5*trace(Dy)
         ds = -0.5*trace(Ds)
-        print 0.5*trace(Ds)
+        #print 0.5*trace(Ds)
         du = -0.5*trace(Du)
         dv = -0.5*trace(Dv)
         dw = -0.5*trace(Dw)
@@ -265,7 +260,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         dx += dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_x.T, alpha))))
         dy += dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_y.T, alpha))))
         ds += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))  
-        print dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))         
+        #print dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))         
         du += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_du + dot(dKstar_u.T, alpha))))
         dv += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dv + dot(dKstar_v.T, alpha))))
         dw += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dw + dot(dKstar_w.T, alpha))))
@@ -276,7 +271,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         dx += 0.5*dot(dot(delt.T, Dx), tmp)
         dy += 0.5*dot(dot(delt.T, Dy), tmp)
         ds += 0.5*dot(dot(delt.T, Ds), tmp)
-        print 0.5*dot(dot(delt.T, Ds), tmp)
+        #print 0.5*dot(dot(delt.T, Ds), tmp)
         du += 0.5*dot(dot(delt.T, Du), tmp)
         dv += 0.5*dot(dot(delt.T, Dv), tmp)
         dw += 0.5*dot(dot(delt.T, Dw), tmp)
@@ -316,7 +311,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         print "x %.05f vs %.05f vs %.05f"%(dx,(check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta, gr[0])
         print "y %.05f vs %.05f vs %.05f"%(dy,(check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta, gr[1])
         print "z %.05f vs %.05f vs %.05f"%(dz,(check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta, gr[2])
-        print "s %.05f vs %.12f vs %.05f"%(ds,(check_likelihood(Xnew, sss=-1 * delta) - l) / delta, gr[3])
+        print "s %.05f vs %.015f vs %.05f"%(ds,(check_likelihood(sss=-1 * delta, cache=cache) - l) / delta, gr[3])
         print "u %.05f vs %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta, cache=cache) - l) / delta, gr[4])
         print "v %.05f vs %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta, cache=cache) - l) / delta, gr[5])
         print "w %.05f vs %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta, cache=cache) - l) / delta, gr[6])
@@ -334,16 +329,17 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             
         
         import numpy as np
-        if numerical:
-            dx = (check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta
-            dy = (check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta
-            dz = (check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta
-            #print normalizeQ(array([ds, du, dv, dw]))
-            ds = (check_likelihood(sss=-1 * delta, cache=cache) - l) / delta
-            du = (check_likelihood(u=-1 * delta, cache=cache) - l) / delta
-            dv = (check_likelihood(v=-1 * delta, cache=cache) - l) / delta
-            dw = (check_likelihood(w=-1 * delta, cache=cache) - l) / delta
-            #print normalizeQ(array([ds, du, dv, dw]))
+
+        dx_ = (check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta
+        dy_ = (check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta
+        dz_ = (check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta
+        #print normalizeQ(array([ds, du, dv, dw]))
+        ds_ = (check_likelihood(sss=-1 * delta, cache=cache) - l) / delta
+        du_ = (check_likelihood(u=-1 * delta, cache=cache) - l) / delta
+        dv_ = (check_likelihood(v=-1 * delta, cache=cache) - l) / delta
+        dw_ = (check_likelihood(w=-1 * delta, cache=cache) - l) / delta
+        #print normalizeQ(array([ds, du, dv, dw]))
+        
         if False:
             Hess = np.zeros([7,7],float)
             deltasqrt2 = delta * sqrt(2)
@@ -365,11 +361,31 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         stepX, stepY, stepZ = stepChange_t*array([dx, dy, dz])
         stepQ = stepChange_q*array([ds, du, dv, dw]) 
         
+        stepX_, stepY_, stepZ_ = stepChange_t*array([dx_, dy_, dz_])
+        stepQ_ = stepChange_q*array([ds_, du_, dv_, dw_]) 
+        
+        tx2 = tx - stepX_
+        ty2 = ty - stepY_
+        tz2 = tz - stepZ_
+        q2 = normalizeQ(q - stepQ_)      
+        
         tx -= stepX
         ty -= stepY
         tz -= stepZ
         q = normalizeQ(q - stepQ) 
+     
         
+        print 'tx', tx, tx2
+        print 'ty', ty, ty2
+        print 'tz', tz, tz2
+        print 's1', q[0], q2[0]
+        print 'u1', q[1], q2[1]
+        print 'v1', q[2], q2[2]
+        print 'w1', q[3], q2[3]
+        
+        if numerical:
+            tx, ty, tz, q = tx2, ty2, tz2, q2
+               
         Ts.append([tx, ty, tz, q])
         
         # now we transform the Xnew by q and tx,ty,tz for the next iteration
@@ -625,13 +641,13 @@ def test():
     sigma = 0.1
 
     T_vector = [0.2,0.2,-.2] #.075,-.02,.03]
-    qReal = Q.rotate('Z', vectors.radians(-30)) * Q.rotate('X', vectors.radians(15)) #-5))
+    qReal = Q.rotate('Z', vectors.radians(-10)) * Q.rotate('X', vectors.radians(15)) #-5))
     u, v, w, s_tmp = qReal
     qReal = array([s_tmp, u, v, w])
     print qReal
     print 'Translation', T_vector
     X,y,pts,z = case2D(randPoints=True, randPointsScene=True, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=100, n2=1,#*50, 
+                       T_vector=T_vector, qReal=qReal, n1=200, n2=10,#*50, 
                        sigma=sigma)
     
     q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200, beta=0.015, numerical=True)
