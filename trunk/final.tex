@@ -3,7 +3,7 @@
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
 
 
-\title{10-725 Midterm Progress Report -- Fast Point Cloud Registration using Gaussian Processes (TA: Shiva)}
+\title{10-725 Final Report -- Fast Point Cloud Registration using Gaussian Processes (TA: Shiva)}
 
 
 \author{
@@ -46,7 +46,7 @@ Pittsburgh, PA 15213 \\
 
 \begin{abstract}
 
-3D range sensing is now ubiquitous in the field of mobile robots. However, many modern 3D range sensors, such as the Velodyne or Kinect, generate massive amounts of data, on the order of one million data points per second,  so it can be challenging to apply standard optimization algorithms for purposes of real-time perception. When given the task of semantic scene understanding, simultaneous localization and mapping (SLAM), tracking, and other low-level perceptual tasks, it is important to be able to reduce these massive point clouds into a more tractable structure to allow real-time computation. We propose transforming the raw data points from 3D sensors to a scene representation based on Gaussian Processes to aid real-time surface construction, registration, and mapping through time. Furthermore, we plan to parallelize our methods to be amenable to GPU computation, thereby enabling real-time operation onboard a moving robot.  
+3D range sensing is now ubiquitous in the field of mobile robots. However, many modern 3D range sensors, such as the Velodyne or Kinect, generate massive amounts of data, on the order of one million data points per second,  so it can be challenging to apply standard optimization algorithms for purposes of real-time perception. When given the task of semantic scene understanding, simultaneous localization and mapping (SLAM), tracking, and other low-level perceptual tasks, it is important to be able to reduce these massive point clouds into a more tractable structure to allow real-time computation. We propose transforming the raw data points from 3D sensors to a scene representation based on Gaussian Processes to aid real-time surface construction, registration, and mapping through time. We focus on the registration problem, showing how we can formulate the problem of finding the optimal rigid transformation of a new set of points as an optimization problem. This problem can be solved with gradient descent or Newton's method, and we compare gradient descent to the existing Iterative Closest Point (ICP) algorithm.
 
 \end{abstract}
 
@@ -56,29 +56,33 @@ Modeling the environment using maps is one of the cornerstones of mobile autonom
 
 Though sensors such as the Kinect are able to generate massive amounts of data, in many cases this ability is not leveraged and the raw data is modified in such a way that important information is lost. For example, when the environment is roughly rectilinear, such as when the robot is navigating a hallway, nearly all of the points in the cloud can be thought of as coming from a few distinct planes. In this way, we could parametrize our point cloud as a set of planes, not only vastly reducing the space and time complexity of representation, but also the noise inherent in the raw measurements, since plane-fitting uses the most likely estimate \cite{martin_real-time_2002}\cite{liu_using_2001}\cite{thrun_real-time_2004}. However, assuming the world is planar is possibly too limiting of a restriction, especially in environments with clutter or curved surfaces. Past work has used mixtures of Gaussians \cite{tsin2004correlation} \cite{jian2005robust} or Gaussian Processes \cite{plagemann2008nonstationary}, but many of these more expressive formulations come at a higher computational expense and thus cannot be used for real-time perception algorithms.
 
-Assuming a large point cloud can be described parametrically by a few surfaces, new data from the sensor can then be registered to the global frame by associating the points with the known surfaces and optimizing with respect to some measure of fit. Typically, this is done using the Iterative Closest Point (ICP) algorithm, which is a somewhat \emph{ad hoc} algorithm that iteratively refines the associations of points from a reference scan and points from a new scan \cite{besl_method_1992}. However, if the surfaces can be described by Gaussian Processes, for instance, the registration problem reduces to an optimization problem with a well-defined gradient. We propose a fast data-parallel algorithm for surface estimation using Gaussian Processes that runs on a GPU and can process large point clouds in real-time. This surface representation is then fed into a parallel gradient based algorithm to find the best fit between two successive point cloud scans to solve the registration problem.
+Assuming a large point cloud can be described parametrically by a few surfaces, new data from the sensor can then be registered to the global frame by associating the points with the known surfaces and optimizing with respect to some measure of fit. Typically, this is done using the Iterative Closest Point (ICP) algorithm, which is a somewhat \emph{ad hoc} greedy algorithm that iteratively refines the associations of points from a reference scan and points from a new scan \cite{besl_method_1992}. However, if the surfaces are modeled by Gaussian Processes then registration problem reduces to an optimization problem with a well-defined gradient. We propose gradient descent and Newton's method to solve this optimization problem, with the ultimate goal of registering large point clouds in real-time. 
 
-\section{Goals and Proposed Method}
+%This surface representation is then fed into a parallel gradient based algorithm to find the best fit between two successive point cloud scans to solve the registration problem.
 
-We wish to do point-to-surface matching using a novel Gaussian Process registration algorithm that we have designed foremost to be operated in real-time on parallel hardware (GPU). Since our concern is speed and not necessarily accuracy, we want to devise an incremental stochastic gradient descent algorithm that can be run many times in parallel using a CUDA kernel over many threads. 
+\section{Proposed Method}
 
-We can describe the problem as follows: Given a set of 3D points $\mathbf{X} = \{\mathbf{x_i} = (x,y,z)^{T}\}$, we can look at the probability of a ``scene'' having generated those points according to some surface model. If the probability of a point is $p(\mathbf{x_i}|\mathbf{\Theta{}})$, where $\mathbf{\Theta{}}$ is the set of parameters describing the scene, then the total probability of an entire scan of data is $p(\mathbf{X}|\mathbf{\Theta{}}) = \prod_{i} p(\mathbf{x_i}|\mathbf{\Theta{}})$. In our problem, we wish to optimize over some spatial transformation in 3D space. Thus, we can minimize over the negative log-likelihood of the data with respect to the transformation parameters,
+We propose a novel Gaussian Process (GP)-based formulation of the point cloud registration problem.
+We can describe the problem as follows: given a set of 3D points $\mathbf{X}$ ({\bf the scene}), and a set of points $\mathbf{X'}$ ({\bf the new}), find the most likely rigid transformation $T$ of $\mathbf{X'}$ to match the points in $X$. 
+To formulate this as an optimization problem, we first use GPs to fit a smooth surface $S$ to $\mathbf{X}$. Then we optimize over
+rigid transformations $T$ to maximize the likelihood of seeing transformed points $T(\mathbf{X'})$ given $S$. We parameterize $T$ as a translation in 3D $(T_x, T_y, T_z)$ and a quaternion rotation in 3D $T_q = (T_s, T_u, T_v, T_w)$ . Our GP formulation and derivation is in Section \ref{sec:math}.
 
-$$
-\min_{\mathbf{q},\mathbf{t}} -\log p(T(\mathbf{X}|\mathbf{q},\mathbf{t})|\mathbf{\Theta{}}) = - \sum_i \log  p(T(\mathbf{x_i}|\mathbf{q},\mathbf{t}) | \mathbf{\Theta{}}) \\
-$$
+ %we can look at the probability of a ``scene'' having generated those points according to some surface model. If the probability of a point is %$p(\mathbf{x_i}|\mathbf{\Theta{}})$, where $\mathbf{\Theta{}}$ is the set of parameters describing the scene, then the total probability of an entire %scan of data is $p(\mathbf{X}|\mathbf{\Theta{}}) = \prod_{i} p(\mathbf{x_i}|\mathbf{\Theta{}})$. In our problem, we wish to optimize over some spatial %transformation in 3D space. Thus, we can minimize over the negative log-likelihood of the data with respect to the transformation parameters,
 
-where $\mathbf{q}$ and $\mathbf{t}$ are the spatial transformation parameters representing quaternion rotation and translation, respectively. Because the particular problem of point cloud data involves a vast amount of points, we can parallelize the computation of the gradient by computing as much of the gradient as possible independently with CUDA threads and then doing a logarithmic number of reductions to obtain the final gradient step. Minimizing over the above equation will provide the maximum likelihood spatial transformation of the data to the scene, and will allow us to register together successive 3D measurements and recover the motion of the sensor.
+%$$
+%\min_{\mathbf{q},\mathbf{t}} -\log p(T(\mathbf{X}|\mathbf{q},\mathbf{t})|\mathbf{\Theta{}}) = - \sum_i \log  p(T(\mathbf{x_i}|\mathbf{q},\mathbf{t}) | %\mathbf{\Theta{}}) \\
+%$$
 
-\section{Previous Work and Milestones}
+%where $\mathbf{q}$ and $\mathbf{t}$ are the spatial transformation parameters representing quaternion rotation and translation, respectively. Because the particular problem of point cloud data involves a vast amount of points, we can parallelize the computation of the gradient by computing as much of the gradient as possible independently with CUDA threads and then doing a logarithmic number of reductions to obtain the final gradient step. Minimizing over the above equation will provide the maximum likelihood spatial transformation of the data to the scene, and will allow us to register together successive 3D measurements and recover the motion of the sensor.
 
-One of the group members (Ben) has done previous work in this area, coming up with a parallel Expectation Maximization algorithm for point cloud segmentation into a Gaussian mixture model (GMM). We believe that a Gaussian Process formulation, however, would provide more flexibility while providing some of the same computational benefits as a GMM formulation. 
+%\section{Previous Work and Milestones}
+%One of the group members (Ben) has done previous work in this area, coming up with a parallel Expectation Maximization algorithm for point cloud segmentation into a Gaussian mixture model (GMM). We believe that a Gaussian Process formulation, however, would provide more flexibility while providing some of the same computational benefits as a GMM formulation. 
 
-The work can be divided into two separate, but related, optimization problems: The first problem is to transform a point cloud using Gaussian Processes so that the spatial representation of surfaces can be continuous. The second problem involves taking such a representation and finding the most likely rigid spatial transformation given a new set of range data representing the same scene. When the rigid spatial transformation is found, the scene and new data can then be fused together. If done in real-time, this process can be iterated as a continuous registration loop in a mapping system for a moving robot.
+%The work can be divided into two separate, but related, optimization problems: The first problem is to transform a point cloud using Gaussian Processes so that the spatial representation of surfaces can be continuous. The second problem involves taking such a representation and finding the most likely rigid spatial transformation given a new set of range data representing the same scene. When the rigid spatial transformation is found, the scene and new data can then be fused together. If done in real-time, this process can be iterated as a continuous registration loop in a mapping system for a moving robot.
 
-As our first milestone we will demonstrate feasibility by writing a serial version of our two optimization problems to operate in a simulated 2D environment. For our second milestone, we will build a parallel CUDA version, and extend it to the 3D case. Finally, this algorithm will then be applied to pre-recorded Kinect data. If the speed of the proposed methods is sufficient for real-time computation, the methods outlined here could then be applied to a moving robot with onboard Kinect sensing. These milestones could be completed in a perfect world, but we will consider our project to be successful if we can develop and implement a parallel surface construction and registration algorithm and run it on simulated 3D data, even if it isn't necessarily in real-time or on real-world (noisy, occluded) data. 
+%As our first milestone we will demonstrate feasibility by writing a serial version of our two optimization problems to operate in a simulated 2D environment. For our second milestone, we will build a parallel CUDA version, and extend it to the 3D case. Finally, this algorithm will then be applied to pre-recorded Kinect data. If the speed of the proposed methods is sufficient for real-time computation, the methods outlined here could then be applied to a moving robot with onboard Kinect sensing. These milestones could be completed in a perfect world, but we will consider our project to be successful if we can develop and implement a parallel surface construction and registration algorithm and run it on simulated 3D data, even if it isn't necessarily in real-time or on real-world (noisy, occluded) data. 
 
-After a discussion with Shiva, we revised our first milestone to be that of understanding the theory underlying our problem and formalizing our objective as an optimization problem. In the next two sections we present related work and our optimization problem.
+%After a discussion with Shiva, we revised our first milestone to be that of understanding the theory underlying our problem and formalizing our objective as an optimization problem. In the next two sections we present related work and our optimization problem.
 
 \section{Related Work}
 
@@ -111,7 +115,7 @@ Other techniques use distance transforms or Gaussian Mixture Models to describe 
 
 \subsection{Comparison to Related Work}
 
-We are developing a parametric surface model under the Gaussian Process framework. Since we do not have to find a nearest neighbor for every point, as is the case in ICP, the optimization can be reduced to efficient inversion of the covariance matrices that appear in the calculations in Section \ref{sec:math}. Furthermore, this formulation allows us to specify gradients with respect to a likelihood under the rigid transformation parameters. For ICP, the metric is simply sum of squared error, which has no such probabilistic foundation. Our work is related closely with surface models, though we choose to let the environment be composed of non-planar regions, giving more flexibility to our model than the planar environment models. Finally, we do not have the discretization problems of the NDT, and we do not need to use a clustering algorithm such as EM as a preprocessing step to find the GMM parameters for the point cloud. 
+We are developing a parametric surface model under the Gaussian Process framework. Since we do not have to find a nearest neighbor for every point, as is the case in ICP, the optimization can be reduced to efficient inversion of the covariance matrices that appear in the calculations in Section \ref{sec:math}. Furthermore, this formulation allows us to specify gradients with respect to a likelihood under the rigid transformation parameters. For ICP, the metric is simply sum of squared error, which has no such probabilistic foundation. Our work is closely related to surface models, though we choose to let the environment be composed of non-planar regions, giving more flexibility to our model than the planar environment models. Finally, we do not have the discretization problems of the NDT, and we do not need to use a clustering algorithm such as EM as a preprocessing step to find the GMM parameters for the point cloud. 
 
 
 \section{Theoretical Development}
@@ -121,7 +125,7 @@ We are developing a parametric surface model under the Gaussian Process framewor
 Gaussian Processes provide an attractive formalism for modeling spatial data. Described in detail in \cite{rasmussen2006gaussian}, we make use of
 them in the regression context, fitting a smooth distribution of surfaces to point data in 3-dimensions. Given a new set of point data, our registration problem becomes an optimization problem: find the best rigid transformation of the new data to match the already calculated distribution of surfaces. Below we describe our optimization problem in terms of
 maximizing the log-likelihood of a Gaussian distribution, using the key feature of Gaussian Processes, that when making predictions at
-a finite set of locations, the Gaussian Process becomes a multivariate Gaussian distribution. Important practical considerations not discussed below, which we will need to address next include choosing and tuning a suitable kernel, and computational challenges in quickly computing the inverse of the various large matrices described below.
+a finite set of locations, the Gaussian Process becomes a multivariate Gaussian distribution. Important practical considerations not discussed below, include choosing and tuning a suitable kernel, and computational challenges in quickly computing the inverse of the various large matrices described below.
 
 \subsection{Rigid Transformations with Quaternions}
 Given a point $x = (x_1,x_2,x_3)$ in $\mathcal{R}^3$, we will define a rigid transformation (rotation and translation) as:
@@ -137,19 +141,20 @@ $$\frac{\partial T}{\partial q}= 2C(R(q)x)^T$$
 $$\frac{\partial T}{\partial t}= 1$$
 
 \subsection{Formulating an Optimization Problem}
-Towards our ultimate goal of describing any rigid set of points in three dimensions, we treat a set of 3D points as elevation data, where given a set of points $\mathbf{X} = \{\mathbf{x_i} = (x_1,x_2,x_3)^{T}\}$, we interpret $(x_1,x_2)$ as locations in a plane, and $x_3$ as an (\hl{the?}) elevation above the plane. We use Gaussian Processes to learn a distribution over functions $f(x_1,x_2) = x_3$ which we denote as $f \sim \mbox{GP}(m,K)$ using a set of points $\mathbf{X}$ from a particular scene. Given a new scene $\mathbf{X'}$ our objective is as follows: learn a rigid transformation $T$ that maximizes the probability that the points $T(\mathbf{X'})$ were drawn from the same distribution $\mbox{GP}(m,K)$. Following Rasmussen and Williams \cite{rasmussen2006gaussian}, we shift notation slightly and write the predictive equations for Gaussian process regression in terms of data $(X,y)$ and new locations $X_{*}$ for which we wish to find a distribution over functions $f_{*}$ as:
+Towards our ultimate goal of describing any rigid set of points in three dimensions, we treat a set of 3D points as elevation data, where given a set of points $\mathbf{X} = \{(x_i,y_i,z_i)^{T}\}$, we interpret $(x_i,y_i)$ as locations in a plane, and $z_i$ as the elevation above the plane. We use Gaussian Processes to fit the scene $\mathbf{X}$, learning a distribution over functions $f(x,y) = z$ which we denote as $f \sim \mbox{GP}(m,K)$. Given the new scene $\mathbf{X'}$ our objective is as follows: learn a rigid transformation $T$ that maximizes the probability that the points $T(\mathbf{X'})$ were drawn from the same distribution $\mbox{GP}(m,K)$. Conceptually, we are learning a distribution over surfaces given $\mathbf{X}$ and then looking for a rigid transformation $T$ of $\mathbf{X'}$ for which the transformed points are likely to have been generated by the distribution.
 
+Given the scene $\mathbf{X} = \{(x,y,z)\}$ and a set of locations $\mathbf{X}_{*} = \{(x_*,y_*,z_*)\}$ in the scene, we can write the predictive equations for Gaussian process regression, following \cite{rasmussen2006gaussian}:
 \begin{eqnarray}
-f_{*} | X, y, X_{*} &\sim& \mathcal{N}(\bar f_{*}, \mbox{cov}(f_{\star})) \\
-\bar f_{*} &=& \mathbf{E}[f_\star | X,y,X_{*}] = K(X_{*},X)[K(X,X) + \sigma_n^2 I]^{-1} y \\
-\mbox{cov}(f_{*}) &=& K(X_{*},X_*) - K(X_*,X)[K(X,X) + \sigma_n^2 I]^{-1} K(X,X_*)
+z_{*} | \mathbf{X}, x_*,y_* &\sim& \mathcal{N}(\mu_*, \Sigma_*) \\
+\mu_* &=& K_*[K + \sigma_n^2 I]^{-1} z \\
+\Sigma_* &=& K_{**} - K_*[K + \sigma_n^2 I]^{-1} K_*^T
 \end{eqnarray}
 
-This is a Gaussian distribution, so we can easily compute its likelihood:
-$$\mathbf{L}(f_*|X,y,X_*) = (2\pi)^{-D/2} |\mbox{cov}(f_*)|^{-1/2} \exp(-\frac{1}{2} (f_* - \bar f_*)^T \mbox{cov}(f_*)^{-1} (f_* - \bar f_*))$$
+%This is a multivariate Gaussian distribution, so its likelihood is (\hl{what is D?}):
+%$$\mathbf{L}(z_*|\mathbf{X}, x_*,y_*) = (2\pi)^{-D/2} |\Sigma_*|^{-1/2} \exp(-\frac{1}{2} (z_* - \mu_*)^T \Sigma^{-1} (z_* - \mu_*))$$
 
-Now we are interested in maximizing this likelihood given observations $(X',y')$ which we transform using a rigid transformation $T$, i.e. substituting $X_* = T(X')$ and $f_* = T(y')$ our optimization problem is:
-$$\max_T \mathbf{L}(T(y')|X,y,T(X')) = (2\pi)^{-D/2} |\mbox{cov}(T(y'))|^{-1/2} \exp(-\frac{1}{2} (T(y') - \overline{T(y')})^T \mbox{cov}(T(y'))^{-1} (T(y') - \overline{T(y')}))$$
+If we are given the new points $\mathbf{X'} = \{x',y',z'\}$ and we want to register them to $\mathbf{X}$ then we need to find a rigid transformation $T$. Any transformation can be evaluated as follows: we define $(x_*,y_*,z_*) = T(x',y',z')$. The likelihood of the multivariate Gaussian distribution  defining the predictive $T$:
+$$\max_T \mathcal{L}(T|\mathbf{X}, \mathbf{X'}) = (2\pi)^{-D/2} |\Sigma_*|^{-1/2} \exp(-\frac{1}{2} (z_* - \mu_*)^T \Sigma^{-1} (z_* - \mu_*))$$
 
 where we similarly substitute:
 \begin{eqnarray}
@@ -159,8 +164,9 @@ T(y') | X, y, T(X') &\sim& \mathcal{N}(\overline{T(y')}, \mbox{cov}(T(y'))) \\
 \end{eqnarray}
 
 \subsection{Gradient descent}
-We will attempt to solve this optimization problem using gradient descent; the best we can hope for is a local minimum, a potential problem we will address computationally if it arises. We calculate the gradient of the log-likelihood by taking partial derivatives with respect to the rotation $q$ and the translation $t$, using the derivations from the previous section:
+We will attempt to solve this optimization problem using gradient descent. Although the unconstrained problem is not convex we can reasonably hope that restricting our parameter space to small translation / rotations will yield a convex problem (see Section \ref{discussion-of-likelihood}), so we also propose a gradient descent method for a constrained version of this problem. 
 
+We calculate the gradient of the log-likelihood by taking partial derivatives with respect to the rotation $q = (T_s, T_u,T_v,T_w)$ and the translation $(T_x, T_y, T_z)$, using the derivations from the previous section:
 
 $$\log \mathbf{L} = -\frac{D}{2} \log (2\pi) - \frac{1}{2} \log \det \mbox{cov}(T(y')) - \frac{1}{2} \left((T(y') - \overline{T(y')})^T \mbox{cov}(T(y'))^{-1} (T(y') - \overline{T(y')})\right)$$
 \begin{eqnarray}
@@ -183,7 +189,6 @@ Assuming that we will choose a kernel which is invariant to rigid transformation
 %&& (K(T(X'),X)) [K(X,X) + \sigma_n^2 I]^{-1} L(X,T(X'))
 \end{eqnarray}
  
-
 Our computation will be aided by noting that this expression has the form $A + A^T$ for some matrix $A$. We can derive the matrix $\frac{\partial}{\partial q} K(T(X'),X))$ as follows where the $(i,j)$th entry of $K(T(X'),X)$ is given by $k(T(x_i), x_j)$ for a kernel $k$:
 \begin{eqnarray}
 \frac{\partial}{\partial q} K(T(X'),X))_{ij} = \frac{\partial}{\partial q} k(T(x_i), x_j) = k'(T(x_i), x_j) \frac{\partial}{\partial q} T(x_i) = k'(T(x_i), x_j) 2C(R(q)x_i)^T

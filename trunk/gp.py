@@ -296,7 +296,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             return transformPtsQ(Xnew, normalizeQ(q - array([ss,u,v,w])), 
                                        array([tx-stepX,ty-stepY,tz-stepZ]))
 
-        def check_likelihood(stepX=0,stepY=0,stepZ=0,sss=0,u=0,v=0,w=0, cache=None):
+        def check_likelihood(Xnew=Xnew, stepX=0,stepY=0,stepZ=0,sss=0,u=0,v=0,w=0, cache=None):
             Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - array([sss,u,v,w])), 
                                        array([tx-stepX,ty-stepY,tz-stepZ]))
             pts = Xnew_transformed[:,0:2]
@@ -308,18 +308,28 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
                 mean, var = gp_chol(X, y, pts, sigma=sigma)
             return getLogL_chol(mean, var, z)
 
-        delta = 1e-9
+        delta = 1e-8
         cache = gp_bootstrap(X,y,sigma)
-        l = check_likelihood(cache=cache)
+        l = check_likelihood(Xnew, cache=cache)
 
         gr = gr[0,:]
         print "x %.05f vs %.05f vs %.05f"%(dx,(check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta, gr[0])
         print "y %.05f vs %.05f vs %.05f"%(dy,(check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta, gr[1])
         print "z %.05f vs %.05f vs %.05f"%(dz,(check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta, gr[2])
-        print "s %.05f vs %.05f vs %.05f"%(ds,(check_likelihood(sss=-1 * delta, cache=cache) - l) / delta, gr[3])
+        print "s %.05f vs %.12f vs %.05f"%(ds,(check_likelihood(Xnew, sss=-1 * delta) - l) / delta, gr[3])
         print "u %.05f vs %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta, cache=cache) - l) / delta, gr[4])
         print "v %.05f vs %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta, cache=cache) - l) / delta, gr[5])
         print "w %.05f vs %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta, cache=cache) - l) / delta, gr[6])
+	#import code; code.interact(local=locals())
+
+        dsn = (check_likelihood(sss=-1 * delta, cache=cache) - l) / delta
+        dun= (check_likelihood(u=-1 * delta, cache=cache) - l) / delta
+        dvn= (check_likelihood(v=-1 * delta, cache=cache) - l) / delta
+        dwn= (check_likelihood(w=-1 * delta, cache=cache) - l) / delta
+
+	print "matrix\t", normalizeQ(q - array([ds,du,dv,dw]))
+	print "numeric\t", normalizeQ(q - array([dsn,dun,dvn,dwn]))
+	print "single\t", normalizeQ(q - array([gr[3],gr[4],gr[5],gr[6]]))
         raw_input()
             
         
