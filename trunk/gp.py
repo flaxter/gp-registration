@@ -170,13 +170,13 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         #var = -dot(v.T,v) + (1.0+sigma**2)*eye(Kstarstar.shape[0])
         
         gr = 0
-        for i, pti in enumerate(Xnew):
+        for i, (pti, pt_ti, z_ti) in enumerate(zip(Xnew, pts, z)):
             meani = mean[i]
             vari = var[i,i]
             
             print pti, meani, vari
             
-            kstar = getK(X, [pti[:2]])
+            kstar = getK(X, [pt_ti])
 
             dsi, dui, dvi, dwi = dRotate(q, pti[0], pti[1], pti[2])
             
@@ -186,7 +186,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             
             dk = zeros((y.shape[0],7))
             for j, ptj in enumerate(X):
-                dk[j,:] = -kstar[j] * ((pti[0]-ptj[0])*grad_x + (pti[1]-ptj[1])*grad_y)
+                dk[j,:] = -kstar[j] * ((pt_ti[0]-ptj[0])*grad_x + (pt_ti[1]-ptj[1])*grad_y)
                 
             dmu = dot(dk.T, alpha)
             
@@ -195,8 +195,9 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             
             dvar = -2.0*dot(v1.T,v2)
              
-            total_gradient = dvar*(.5*(vari**-1) - 0.5*(vari**-2) * (meani - pti[2])**2)
-            total_gradient += (vari**-1) * (meani - pti[2]) * (dmu - grad_z)
+            total_gradient = dvar*(.5*(vari**-1) - 0.5*(vari**-2) * (meani - z_ti)**2)
+            print total_gradient
+            total_gradient += (vari**-1) * (meani - z_ti) * (dmu - grad_z)
             gr += total_gradient
  
         gr = gr / Xnew.shape[0]
