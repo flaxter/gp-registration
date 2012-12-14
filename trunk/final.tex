@@ -1,5 +1,5 @@
 \documentclass{article} % For LaTeX2e
-\usepackage{nips12submit_e,times,soul}
+\usepackage{nips12submit_e,times,soul,amsmath}
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
 
 
@@ -213,9 +213,20 @@ where we used the identity $\partial(X^{-1}) = - X^{-1} (\partial X) X^{-1}$ \ci
 For space, we do not show the final expression. We also need to find $\frac{\partial \log \mathbf{L}}{\partial t}$. This is essentially
 equivalent to the preceding derivation, with the following simplification: $\frac{\partial }{\partial t} T(x_i) = 1$ so we can omit the $2C(\cdot)$ function from the preceding expressions.
 
-\subsection{Other optimization methods}
-Here is our optimization problem again with irrelevant terms omitted and stated as minimizing the negative log-likelihood:
-$$\min \log \det \mbox{cov}(T(y')) + \left((T(y') - \overline{T(y')})^T \mbox{cov}(T(y'))^{-1} (T(y') - \overline{T(y')})\right)$$
+\subsection{Newton's method}
+Once we've done the work of calculating the gradient, the derivation of the Hessian is a natural, albeit quite math-intensive, extension. Newton's method requires inverting the Hessian, which is a $7 \times 7$ matrix, so this is a relatively cheap operation, and we expect that Newton's method will show large improvements in terms of the convergence rate as compared to gradient descent. We show parts of the derivation, omitting full details for space\footnote{We further note that numerically approximating the Hessian based on the analytically derived gradient may give suitable results, while avoiding implementation errors}:
+\begin{align*}
+\frac{\partial^2 }{\partial T_x \partial T_y} \Sigma &= \frac{\partial^2}{\partial T_x \partial T_y} K_{**} - \left(\frac{\partial^2}{\partial T_x \partial T_y}K_{*}\right) [K + \sigma^2 I]^{-1} K_*^T - K_{*} [K + \sigma^2 I]^{-1} \frac{\partial^2}{\partial T_x \partial T_y} K_*^T \\
+\end{align*}
+The first term is 0, and the others depend on the choice of kernel as in the previous section. Derivations with $T_z$ and $T_q$ are similar.
+
+The second term in the likelihood requires finding:
+\begin{align*}
+\frac{\partial^2 }{\partial T_x \partial T_y} (z_* - \mu) &= \frac{\partial^2 }{\partial T_x \partial T_y} (- \mu) 
+= \frac{\partial^2 }{\partial T_x \partial T_y}( K_* [K+\sigma^2 I]^{-1} z)
+= (\frac{\partial^2 }{\partial T_x \partial T_y} K_*) [K+\sigma^2 I]^{-1} z
+\end{align*}
+Again, this depends on the choice of kernel. Derivations with $T_z$ are similar except $z$ is replaced by a vector of all $1$s and derivations with $T_q$ are similar.
 
 %\begin{figure}[h]
 %\begin{center}
