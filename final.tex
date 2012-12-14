@@ -46,7 +46,7 @@ Pittsburgh, PA 15213 \\
 
 \begin{abstract}
 
-3D range sensing is now ubiquitous in the field of mobile robots. However, many modern 3D range sensors, such as the Velodyne or Kinect, generate massive amounts of data, on the order of one million data points per second,  so it can be challenging to apply standard optimization algorithms for purposes of real-time perception. When given the task of semantic scene understanding, simultaneous localization and mapping (SLAM), tracking, and other low-level perceptual tasks, it is important to be able to reduce these massive point clouds into a more tractable structure to allow real-time computation. We propose transforming the raw data points from 3D sensors to a scene representation based on Gaussian Processes to aid real-time surface construction, registration, and mapping through time. We focus on the registration problem, showing how we can formulate the problem of finding the optimal rigid transformation of a new set of points as an optimization problem. We derive various solutions to this optimization problem through {\bf backtracking projected gradient descent} and {\bf Newton's method}, and explain how to incorporate extra constraints. Finally, we implement the gradient descent method and compare its performance to the existing Iterative Closest Point (ICP) algorithm.
+3D range sensing is now ubiquitous in the field of mobile robots. However, many modern 3D range sensors, such as the Velodyne or Kinect, generate massive amounts of data, on the order of one million data points per second,  so it can be challenging to apply standard optimization algorithms for purposes of real-time perception. When given the task of semantic scene understanding, simultaneous localization and mapping (SLAM), tracking, and other low-level perceptual tasks, it is important to be able to reduce these massive point clouds into a more tractable structure to allow real-time computation. We propose transforming the raw data points from 3D sensors to a scene representation based on Gaussian Processes to aid real-time surface construction, registration, and mapping through time. We focus on the registration problem, showing how we can formulate the problem of finding the optimal rigid transformation of a new set of points as an optimization problem. We use {\bf matrix calculus} to derive various solutions to this optimization problem through {\bf backtracking projected gradient descent} and {\bf Newton's method}, and explain how to incorporate extra constraints. Finally, we implement the gradient descent method using {\bf Cholesky decomposition} to insure speed and numerical stability, and compare its performance to the existing Iterative Closest Point (ICP) algorithm.
 
 \end{abstract}
 
@@ -223,14 +223,14 @@ In the above equation the bolded $\mathbf{x}_j$ refers to the first two componen
 k(x_i,x_j) = k_1\exp(-0.5*k_2||x_i-x_j||^2)
 \end{equation}
 
-Setting the parameters $k_1$ and $k_2 = 1$, our final equation for the partial of $K_*$ looks like,
+Setting the parameters $k_1 = k_2 = 1$, our final equation for the partial of $K_*$ is:
 
 \begin{eqnarray}
 \left(\frac{\partial K_*}{\partial q}\right)_{ij} = -(\mathbf{x}_{i*} - \mathbf{x}_j)^T k(\mathbf{x}_{i*}, \mathbf{x}_j) \frac{ \partial R_{12}(q)}{\partial q} \mathbf{x}'_i
 \label{equation:partialKqFinal}
 \end{eqnarray}
 
-The partial of $K_{**}$ using the squared exponential kernel takes on a similar form, except both vectors in the kernel arguments have a nonzero partial derivative with respect to $q$,
+The partial of $K_{**}$ using the squared exponential kernel takes on a similar form, except both vectors in the kernel arguments have a nonzero partial derivative with respect to $q$:
 
 \begin{eqnarray}
 \left(\frac{\partial K_{**}}{\partial q}\right)_{ij} = -(\mathbf{x}_{i*} - \mathbf{x}_{j*})^T k(\mathbf{x}_{i*}, \mathbf{x}_{j*}) \frac{ \partial R_{12}(q)}{\partial q} (\mathbf{x}'_i - \mathbf{x}'_j)
@@ -248,9 +248,10 @@ $$= \frac{\partial R_3(q)}{\partial q}z' - \frac{\partial K_*}{\partial q} \left
 Here $R_3$ denotes the third row of $R$. Note that the partial of $K_*$ was previously derived in Equation~\ref{equation:partialKqFinal}.
 
 Dealing with the middle term of the second term in Equation \ref{eq-partialq} requires evaluating this partial derivative:
-\begin{eqnarray*}
+\begin{eqnarray}
 \frac{\partial}{\partial q} \left(\Sigma_*^{-1}\right) = -\Sigma_*^{-1} \frac{\partial}{\partial q}\left(\Sigma_*\right) \Sigma_*^{-1}
-\end{eqnarray*}
+\label{eq:inversecov}
+\end{eqnarray}
 
 where we used the identity $\partial(X^{-1}) = - X^{-1} (\partial X) X^{-1}$ \cite{petersen2008matrix}. We already derived $\frac{\partial}{\partial q} (\Sigma_*)$ above in Equation \ref{eq-covpartialq}.
 
@@ -263,25 +264,25 @@ To implement gradient descent, we use the gradient in our update step. We used t
 As explained in \cite{wheeler1995}, although quaternions have 4 parameters, the space of rotations in 3D is best parameterized by quaternions of length 1. This turns our unconstrained optimization problem into a constrained problem with a simple constraint: $||T_q||^2_2 = 1$. We can solve this problem using projected gradient descent: after doing the gradient update, we simply project the new parameter $T$ to the space in which $||T_q||^2_2 = 1$
 by renormalizing: $T_q' = \frac{T_q}{||T_q||^2_2}$.
 
-In Figure \ref{figure:likelihood} in the Appendix, we show a likelihood surface based on synthetic data, projected into 3D. Notice that globally, the problem is not convex, but that there is a well-behaved bowl-shaped region near the origin. Practically, we know that two scenes that we are trying to register will represent pictures of the world taken very close in time (i.e.~1/30th of a second), and thus the rotation and translation will not be large because the sensor will be moving smoothly and slowly compared to the frame rate. Thus, it makes sense to consider further constraining our optimization problem to small translations and rotations. For translations, the simplest way to do this is to constrain the length of the translation vector: $\|T_x^2 + T_y^2 + T_z^2\|^2_2 \leq \epsilon_1$. For rotations, a small rotation angle is equivalent to having the real component of the quaternion, $T_s$, be close to $1$ \cite{wheeler1995} (the intuition is that for a unit length quaternion $T_q$, if $T_s$ parameter is close to $1$, $T_q$ is close to the identity quaternion $[1 0 0 0]^T$). Thus we add the constraint $T_s^2 \geq 1-\epsilon_2$.
+In Figure \ref{figure:likelihood} in the Appendix, we show a likelihood surface based on synthetic data, projected into 3D. Notice that globally, the problem is not convex, but that there is a well-behaved bowl-shaped region near the origin. Practically, we know that two scenes that we are trying to register will represent pictures of the world taken very close in time (i.e.~1/30th of a second), and thus the rotation and translation will not be large because the sensor will be moving smoothly and slowly compared to the frame rate. Thus, it makes sense to consider further constraining our optimization problem to small translations and rotations. For translations, the simplest way to do this is to constrain the length of the translation vector: $\|T_x^2 + T_y^2 + T_z^2\|^2_2 \leq \epsilon_1$. For rotations, a small rotation angle is equivalent to having the real component of the quaternion, $T_s$, be close to $1$ \cite{wheeler1995} (the intuition is that for a unit length quaternion $T_q$, if $T_s$ parameter is close to $1$, $T_q$ is close to the identity quaternion $[1, 0, 0, 0]^T$). Thus we add the constraint $T_s^2 \geq 1-\epsilon_2$.
 
-We can again use projected gradient descent to incorporate these two new constraints: for each gradient update step we first normalize $q$ as described above, then we check whether $\|T_x^2 + T_y^2 + T_z^2\|^2_2 \leq \epsilon_1$ and if it's not, we linearly scale it so that $\|T_x^2 + T_y^2 + T_z^2\|^2_2 = \epsilon_1$. Finally, we check whether $T_s^2 \geq 1-\epsilon_2$. If it's not, we set $T_s^2 = 1-\epsilon_2$ and renormalize $T_q$. 
+We can again use projected gradient descent to incorporate these two new constraints: for each gradient update step we first normalize $q$ as described above, then we check whether $\|T_x^2 + T_y^2 + T_z^2\|^2_2 \leq \epsilon_1$ and if not, we linearly scale it so that $\|T_x^2 + T_y^2 + T_z^2\|^2_2 = \epsilon_1$. Finally, we check whether $T_s^2 \geq 1-\epsilon_2$. If not, we set $T_s^2 = 1-\epsilon_2$ and renormalize $T_q$ to be a unit-length quaternion. 
 
 \subsection{Newton's method}
 \label{sec:newton}
-Once we've done the work of calculating the gradient, the derivation of the Hessian is a natural, albeit quite math-intensive, extension. Newton's method requires inverting the Hessian, which is a $7 \times 7$ matrix, so this is a relatively cheap operation, and we expect that Newton's method will show large improvements in terms of the convergence rate as compared to gradient descent. We show parts of the derivation, omitting full details for space\footnote{We further note that numerically approximating the Hessian based on the analytically derived gradient may give suitable results, while avoiding implementation errors}:
+Once we've done the work of calculating the gradient, the derivation of the Hessian is a natural, albeit quite math-intensive, extension. Newton's method requires inverting the Hessian, which is a $7 \times 7$ matrix, so this is a relatively cheap operation, and we expect that Newton's method will show large improvements in terms of the convergence rate as compared to gradient descent. We show parts of the derivation, omitting full details for space\footnote{We further note that it is possible to numerically approximate the Hessian from the analytically derived gradient. In practice, this approach may give suitable results while avoiding implementation errors.}:
 \begin{align*}
-\frac{\partial^2 }{\partial T_x \partial T_y} \Sigma &= \frac{\partial^2}{\partial T_x \partial T_y} K_{**} - \left(\frac{\partial^2}{\partial T_x \partial T_y}K_{*}\right) [K + \sigma^2 I]^{-1} K_*^T - K_{*} [K + \sigma^2 I]^{-1} \frac{\partial^2}{\partial T_x \partial T_y} K_*^T \\
+\frac{\partial^2 }{\partial T_x \partial T_y} \Sigma &= \frac{\partial^2}{\partial T_x \partial T_y} K_{**} - \left(\frac{\partial^2}{\partial T_x \partial T_y}K_{*}\right) [K + \sigma^2 I]^{-1} K_*^T - K_{*} [K + \sigma^2 I]^{-1} \left(\frac{\partial^2}{\partial T_x \partial T_y} K_*^T\right) \\
 \end{align*}
 The first term is 0, and the others depend on the choice of kernel as in the previous section. Derivations with $T_z$ and $T_q$ are similar.
 
 The second term in the likelihood requires finding:
 \begin{align*}
-\frac{\partial^2 }{\partial T_x \partial T_y} (z_* - \mu) &= \frac{\partial^2 }{\partial T_x \partial T_y} (- \mu) 
+\frac{\partial^2 }{\partial T_x \partial T_y} (z_* - \mu_*) &= \frac{\partial^2 }{\partial T_x \partial T_y} (- \mu_*) 
 = \frac{\partial^2 }{\partial T_x \partial T_y}( K_* [K+\sigma^2 I]^{-1} z)
 = (\frac{\partial^2 }{\partial T_x \partial T_y} K_*) [K+\sigma^2 I]^{-1} z
 \end{align*}
-Again, this depends on the choice of kernel. Derivations with $T_z$ are similar except $z$ is replaced by a vector of all $1$s and derivations with $T_q$ are similar.
+Again, this depends on the choice of kernel. Derivations with $T_z$ and $T_q$ are similar, requiring the correct application of matrix calculus as in the previous section. To finish the derivation, we proceed as in the previous section. Taking another partial derivative of Equation \ref{eq:inversecov} is quite messy, requiring repeated application of the product rule and the identity  $\partial(X^{-1}) = - X^{-1} (\partial X) X^{-1}$.
 
 %\begin{figure}[h]
 %\begin{center}
@@ -350,7 +351,9 @@ For the following experiments, we generated simulated elevation data. An example
 ICP converges faster, but often to a poorer local minimum.
 
 \section{Conclusion}
-
+Gaussian Processes can represent and recover the transformation of a 3D scene. The convergence rate of Gaussian Processes outperforms ICP,
+and the speed is not too much slower. The performance needs to be evaluated with real point cloud data, and subsampling of both the scene and the new points should be considered as a possible speedup. Real point cloud data might also warrant a different choice of kernel or further tuning of the kernel parameters. It is also important to try an experimental evaluation of the Newton's method-based optimization.
+We noticed much better performance with small transformations, which motivated the constrained version of our problem. We did not discuss how to choose the constraints $\epsilon_1$ and $\epsilon_2$---if a real system was being built, these would be derived from the angular velocity, speed, and frame rate of the camera. 
 
 \bibliographystyle{./IEEEtran}
 % argument is your BibTeX string definitions and bibliography database(s)
