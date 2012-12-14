@@ -208,28 +208,30 @@ First, we derive the partial of $\Sigma_*$ with respect to $q$:
 %&& (K_*) [K + \sigma_n^2 I]^{-1} L(X,T(X'))
 \end{eqnarray}
  
-Our computation will be aided by noting that this expression has the form $A + A^T$ for some matrix $A$. We can derive the matrix $\frac{\partial}{\partial q} K_*$ as follows where the $(i,j)$th entry of $K_*$ is given by $k(\mathbf{x}_{*i}, \mathbf{x}_j)$ for a kernel $k$:
+%Our computation will be aided by noting that this expression has the form $A + A^T$ for some matrix $A$.
+
+ We can derive the matrix $\frac{\partial}{\partial q} K_*$ as follows where the $(i,j)$th entry of $K_*$ is given by $k(\mathbf{x}_{i*}, \mathbf{x}_j)$ for a kernel $k$:
 \begin{eqnarray}
-\left(\frac{\partial K_*}{\partial q}\right)_{ij} = \frac{\partial}{\partial q} k(\mathbf{x}_{*i}, \mathbf{x}_j) = k'(\mathbf{x}_{*i}, \mathbf{x}_j)^T \frac{\partial \mathbf{x}_{*i}}{\partial q}  = k'(\mathbf{x}_{*i}, \mathbf{x}_j)^T \frac{\partial}{\partial q} R_{12}(q)\mathbf{x}'_i
+\left(\frac{\partial K_*}{\partial q}\right)_{ij} = \frac{\partial}{\partial q} k(\mathbf{x}_{i*}, \mathbf{x}_j) = k'(\mathbf{x}_{i*}, \mathbf{x}_j)^T \frac{\partial \mathbf{x}_{i*}}{\partial q}  = k'(\mathbf{x}_{i*}, \mathbf{x}_j)^T \frac{\partial}{\partial q} R_{12}(q)\mathbf{x}'_i
 \label{equation:partialKq}
 \end{eqnarray}
-In the above equation the bolded $\mathbf{x}_j$ refers to the first two components of the $j$th element of $\mathbf{X}$ (likewise for $\mathbf{x_*}$ and $\mathbf{x'}$. Additionally, $R_{12}(q)$ refers to the first two rows of the rotation matrix formed by $q$. The partial derivative of the kernel function depends on our choice of kernel. For this paper, we chose to use the squared exponential kernel, defined as:
+In the above equation the bolded $\mathbf{x}_j$ refers to the first two components of the $j$th element of $\mathbf{X}$ (likewise for $\mathbf{x_*}$ and $\mathbf{x'}$). Additionally, $R_{12}(q)$ refers to the first two rows of the rotation matrix formed by $q$. The partial derivative of the kernel function depends on our choice of kernel. For this paper, we chose to use the squared exponential kernel, defined as:
 
 \begin{equation}
 k(x_i,x_j) = k_1\exp(-0.5*k_2||x_i-x_j||^2)
 \end{equation}
 
-Setting both constants to one, our final equation for the partial of $K_*$ looks like,
+Setting the parameters $k_1$ and $k_2 = 1$, our final equation for the partial of $K_*$ looks like,
 
 \begin{eqnarray}
-\left(\frac{\partial K_*}{\partial q}\right)_{ij} = -(\mathbf{x}_{*i} - \mathbf{x}_j)^T k(\mathbf{x}_{*i}, \mathbf{x}_j) \frac{ \partial R_{12}(q)}{\partial q} \mathbf{x}'_i
+\left(\frac{\partial K_*}{\partial q}\right)_{ij} = -(\mathbf{x}_{i*} - \mathbf{x}_j)^T k(\mathbf{x}_{i*}, \mathbf{x}_j) \frac{ \partial R_{12}(q)}{\partial q} \mathbf{x}'_i
 \label{equation:partialKqFinal}
 \end{eqnarray}
 
 The partial of $K_{**}$ using the squared exponential kernel takes on a similar form, except both vectors in the kernel arguments have a nonzero partial derivative with respect to $q$,
 
 \begin{eqnarray}
-\left(\frac{\partial K_{**}}{\partial q}\right)_{ij} = -(\mathbf{x}_{*i} - \mathbf{x}_{*j})^T k(\mathbf{x}_{*i}, \mathbf{x}_{*j}) \frac{ \partial R_{12}(q)}{\partial q} (\mathbf{x}'_i - \mathbf{x}'_j)
+\left(\frac{\partial K_{**}}{\partial q}\right)_{ij} = -(\mathbf{x}_{i*} - \mathbf{x}_{j*})^T k(\mathbf{x}_{i*}, \mathbf{x}_{j*}) \frac{ \partial R_{12}(q)}{\partial q} (\mathbf{x}'_i - \mathbf{x}'_j)
 \label{equation:partialKstarstarqFinal}
 \end{eqnarray}
 
@@ -258,7 +260,7 @@ To implement gradient descent, we use the gradient in our update step. We used t
 \subsection{Projected gradient descent}
 \hl{Discuss projection onto $\|q\|=1$ here?}
 
-In Figure \ref{figure:likelihood} in the Appendix, we show a synthetic likelihood surface projected into 3D, showing a rotation around one axis and a translation along one axis. Notice that globally, the problem is not convex, but that there is a nice bowl-shaped region near the origin. Practically, we know that two scenes that we are trying to register will represent pictures of the world taken very close in time (i.e.~1/30th of a second), and thus the rotation and translation will not be large because the sensor will be moving smoothly and slowly compared to the frame rate. Thus, it makes sense to consider constraining our optimization problem to small translations and rotations. The simplest way to do this is to add a rectangular constraint, constraining each coordinate of $T$ to be in a range $[u_i,l_i]$. 
+In Figure \ref{figure:likelihood} in the Appendix, we show a likelihood surface based on synthetic data, projected into 3D. Notice that globally, the problem is not convex, but that there is a well-behaved bowl-shaped region near the origin. Practically, we know that two scenes that we are trying to register will represent pictures of the world taken very close in time (i.e.~1/30th of a second), and thus the rotation and translation will not be large because the sensor will be moving smoothly and slowly compared to the frame rate. Thus, it makes sense to consider constraining our optimization problem to small translations and rotations. For translations, the simplest way to do this is to constrain the length of the translation vector: $\|T_x^2 + T_y^2 + T_z^2\| \leq \epsilon_1$. 
 Then we can use projected gradient descent to solve our problem: for each gradient update based on the unconstrained problem in the previous section, 
 we make the update and then project it to back to rectangular surface. Euclidean projection onto a rectangle simply replaces coordinates outside the rectangle by their upper or lower bound (whichever is closer) \cite[p. 399]{boyd2004convex}.
 
