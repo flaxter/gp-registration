@@ -46,7 +46,7 @@ Pittsburgh, PA 15213 \\
 
 \begin{abstract}
 
-3D range sensing is now ubiquitous in the field of mobile robots. However, many modern 3D range sensors, such as the Velodyne or Kinect, generate massive amounts of data, on the order of one million data points per second,  so it can be challenging to apply standard optimization algorithms for purposes of real-time perception. When given the task of semantic scene understanding, simultaneous localization and mapping (SLAM), tracking, and other low-level perceptual tasks, it is important to be able to reduce these massive point clouds into a more tractable structure to allow real-time computation. We propose transforming the raw data points from 3D sensors to a scene representation based on Gaussian Processes to aid real-time surface construction, registration, and mapping through time. We focus on the registration problem, showing how we can formulate the problem of finding the optimal rigid transformation of a new set of points as an optimization problem. This problem can be solved with gradient descent or Newton's method, and we compare gradient descent to the existing Iterative Closest Point (ICP) algorithm.
+3D range sensing is now ubiquitous in the field of mobile robots. However, many modern 3D range sensors, such as the Velodyne or Kinect, generate massive amounts of data, on the order of one million data points per second,  so it can be challenging to apply standard optimization algorithms for purposes of real-time perception. When given the task of semantic scene understanding, simultaneous localization and mapping (SLAM), tracking, and other low-level perceptual tasks, it is important to be able to reduce these massive point clouds into a more tractable structure to allow real-time computation. We propose transforming the raw data points from 3D sensors to a scene representation based on Gaussian Processes to aid real-time surface construction, registration, and mapping through time. We focus on the registration problem, showing how we can formulate the problem of finding the optimal rigid transformation of a new set of points as an optimization problem. We propose various solutions to this optimization problem: {\bf backtracking projected gradient descent} and {\bf Newton's method}, and we implement the gradient descent method and compare it to the existing Iterative Closest Point (ICP) algorithm.
 
 \end{abstract}
 
@@ -56,16 +56,18 @@ Modeling the environment using maps is one of the cornerstones of mobile autonom
 
 Though sensors such as the Kinect are able to generate massive amounts of data, in many cases this ability is not leveraged and the raw data is modified in such a way that important information is lost. For example, when the environment is roughly rectilinear, such as when the robot is navigating a hallway, nearly all of the points in the cloud can be thought of as coming from a few distinct planes. In this way, we could parametrize our point cloud as a set of planes, not only vastly reducing the space and time complexity of representation, but also the noise inherent in the raw measurements, since plane-fitting uses the most likely estimate \cite{martin_real-time_2002}\cite{liu_using_2001}\cite{thrun_real-time_2004}. However, assuming the world is planar is possibly too limiting of a restriction, especially in environments with clutter or curved surfaces. Past work has used mixtures of Gaussians \cite{tsin2004correlation} \cite{jian2005robust} or Gaussian Processes \cite{plagemann2008nonstationary}, but many of these more expressive formulations come at a higher computational expense and thus cannot be used for real-time perception algorithms.
 
-Assuming a large point cloud can be described parametrically by a few surfaces, new data from the sensor can then be registered to the global frame by associating the points with the known surfaces and optimizing with respect to some measure of fit. Typically, this is done using the Iterative Closest Point (ICP) algorithm, which is a somewhat \emph{ad hoc} greedy algorithm that iteratively refines the associations of points from a reference scan and points from a new scan \cite{besl_method_1992}. However, if the surfaces are modeled by Gaussian Processes then registration problem reduces to an optimization problem with a well-defined gradient. We propose gradient descent and Newton's method to solve this optimization problem, with the ultimate goal of registering large point clouds in real-time. 
+Assuming a large point cloud can be described parametrically by a few surfaces, new data from the sensor can then be registered to the global frame by associating the points with the known surfaces and optimizing with respect to some measure of fit. Typically, this is done using the Iterative Closest Point (ICP) algorithm, which is a somewhat \emph{ad hoc} greedy algorithm that iteratively refines the associations of points from a reference scan and points from a new scan \cite{besl_method_1992}. By contrast, our proposed formulation has nice properties, and it can be efficiently optimized as we show.
 
 %This surface representation is then fed into a parallel gradient based algorithm to find the best fit between two successive point cloud scans to solve the registration problem.
 
 \section{Proposed Method}
 
 We propose a novel Gaussian Process (GP)-based formulation of the point cloud registration problem.
-We can describe the problem as follows: given a set of 3D points $\mathbf{X}$ ({\bf the scene}), and a set of points $\mathbf{X'}$ ({\bf the new}), find the most likely rigid transformation $T$ of $\mathbf{X'}$ to match the points in $X$. 
+We state the problem as follows: given a set of 3D points $\mathbf{X}$ ({\bf the scene}), and a set of points $\mathbf{X'}$ ({\bf the new}), find the most likely rigid transformation $T$ of $\mathbf{X'}$ to match the points in $X$. 
 To formulate this as an optimization problem, we first use GPs to fit a smooth surface $S$ to $\mathbf{X}$. Then we optimize over
-rigid transformations $T$ to maximize the likelihood of seeing transformed points $T(\mathbf{X'})$ given $S$. We parameterize $T$ as a translation in 3D $(T_x, T_y, T_z)$ and a quaternion rotation in 3D $T_q = (T_s, T_u, T_v, T_w)$ . Our GP formulation and derivation is in Section \ref{sec:math}.
+rigid transformations $T$ to maximize the likelihood of seeing transformed points $T(\mathbf{X'})$ given $S$. We parameterize $T$ as a translation in 3D: $(T_x, T_y, T_z)$ and a quaternion rotation in 3D: $T_q = (T_s, T_u, T_v, T_w)$ . Our GP formulation and derivation is in Section \ref{sec:math}.
+
+We propose to use gradient descent and Newton's method to solve our novel registration problem. The formulation and derivations we given in Sections \ref{sec:gradient} and \ref{sec:newton} are original.
 
  %we can look at the probability of a ``scene'' having generated those points according to some surface model. If the probability of a point is %$p(\mathbf{x_i}|\mathbf{\Theta{}})$, where $\mathbf{\Theta{}}$ is the set of parameters describing the scene, then the total probability of an entire %scan of data is $p(\mathbf{X}|\mathbf{\Theta{}}) = \prod_{i} p(\mathbf{x_i}|\mathbf{\Theta{}})$. In our problem, we wish to optimize over some spatial %transformation in 3D space. Thus, we can minimize over the negative log-likelihood of the data with respect to the transformation parameters,
 
@@ -125,10 +127,10 @@ We are developing a parametric surface model under the Gaussian Process framewor
 Gaussian Processes provide an attractive formalism for modeling spatial data. Described in detail in \cite{rasmussen2006gaussian}, we make use of
 them in the regression context, fitting a smooth distribution of surfaces to point data in 3-dimensions. Given a new set of point data, our registration problem becomes an optimization problem: find the best rigid transformation of the new data to match the already calculated distribution of surfaces. Below we describe our optimization problem in terms of
 maximizing the log-likelihood of a Gaussian distribution, using the key feature of Gaussian Processes, that when making predictions at
-a finite set of locations, the Gaussian Process becomes a multivariate Gaussian distribution. Important practical considerations not discussed below, include choosing and tuning a suitable kernel, and computational challenges in quickly computing the inverse of the various large matrices described below.
+a finite set of locations, the Gaussian Process becomes a multivariate Gaussian distribution. Important practical considerations not discussed below include choosing and tuning a suitable kernel, and computational challenges in quickly computing the inverse of the various large matrices described below.
 
 \subsection{Rigid Transformations with Quaternions}
-Given a point $x = (x_1,x_2,x_3)$ in $\mathcal{R}^3$, we will define a rigid transformation (rotation and translation) as:
+Given a point $x = (x_1,x_2,x_3)^T$ in $\mathcal{R}^3$, we will define a rigid transformation (rotation and translation) as:
 $$T(x) := q [x_1, x_2, x_3, 0]^T \bar q +t = R(q) x + t$$ where $q = (s,u,v,w)$ is a unit quaternion, $R$ is the $3 \times 3$ rotation matrix uniquely defined by $q$ (see \cite{wheeler1995}, page 3),
 
 \begin{equation}
@@ -138,7 +140,7 @@ s^2+u^2-v^2-w^2 & 2(uv-sw) & 2(uw+sv)\\
 2(uw-sv) & 2(vw+su) & s^2-u^2-v^2+w^2\end{array} \right].
 \end{equation} 
 
-and $t \in \mathcal{R}^3$ is a translation vector. We will work in terms of quaternions because this will yield a very simple form for the gradient of $T$. 
+and $t \in \mathcal{R}^3$ is a translation vector. We will work in terms of quaternions because this will yield a simple form for the gradient of $T$. 
 
 
 %Define $C(x)$ to be the skew-symmetric matrix of $x$:
@@ -168,7 +170,7 @@ z_{*} | \mathbf{X}, x_*,y_* &\sim& \mathcal{N}(\mu_*, \Sigma_*) \\
 Here, $K$, $K_*$, and $K_{**}$ denote the Gram matrices $K(\mathbf{X},\mathbf{X})$, $K(\mathbf{X}$,$\mathbf{X_*}$), and $K(\mathbf{X_*},\mathbf{X_*})$, respectively. If we are given the new points $\mathbf{X'}$ and we want to register them to $\mathbf{X}$ then we need to find a rigid transformation $T$. We define $\mathbf{X_*} = T(\mathbf{X'}) = R(q)\mathbf{X'} + t$, where $q = (T_s, T_u,T_v,T_w)$ and $t = (T_x, T_y, T_z)$. 
 
 
-Thus, our optimization problem is to find the solution to the maximum likelihood of the multivariate Gaussian distribution defining the predictive $T$:
+Thus, our optimization problem is to maximize the likelihood of the multivariate Gaussian distribution over transformations $T$:
 \begin{equation}
 \max_T \mathcal{L}(T|\mathbf{X}, \mathbf{X'}) = (2\pi)^{-D/2} |\Sigma_*|^{-1/2} \exp(-\frac{1}{2} (z_* - \mu_*)^T \Sigma_*^{-1} (z_* - \mu_*))
 \end{equation}
@@ -181,8 +183,8 @@ Thus, our optimization problem is to find the solution to the maximum likelihood
 %\end{eqnarray}
 
 \subsection{Gradient Descent}
-We will attempt to solve this optimization problem using gradient descent. Although the unconstrained problem is not convex we can reasonably hope that restricting our parameter space to small translation / rotations will yield a convex problem (see Section \ref{discussion-of-likelihood}), so we also propose a gradient descent method for a constrained version of this problem. 
-
+\label{sec:gradient}
+Our first solution to  this optimization problem is by gradient descent. 
 We calculate the gradient of the log-likelihood by taking partial derivatives with respect to the rotation $q = (T_s, T_u,T_v,T_w)$ and the translation $(T_x, T_y, T_z)$, using the derivations from the previous section:
 
 \begin{equation}
@@ -258,13 +260,15 @@ equivalent to the preceding derivation, with the following simplification: $\fra
 To implement gradient descent, we use the gradient in our update step. We used the standard backtracking line search to find a suitable step-size. Backtracking line search iteratively descreases the stepsize while evaluating the likelihood function to find a suitable descent amount \cite[p. 464]{boyd2004convex}.
 
 \subsection{Projected gradient descent}
-\hl{Discuss projection onto $\|q\|=1$ here?}
+As explained in \cite{wheeler1995}, although quaternions have 4 parameters, the space of rotations in 3D is best parameterized by quaternions of length 1. This turns our unconstrained optimization problem into a constrained problem with a simple constraint: $||T_q||^2_2 = 1$. We can solve this problem using projected gradient descent: after doing the gradient update, we simply project the new parameter $T$ to the space in which $||T_q||^2_2 = 1$
+by renormalizing: $T_q' = \frac{T_q}{||T_q||^2_2}$.
 
-In Figure \ref{figure:likelihood} in the Appendix, we show a likelihood surface based on synthetic data, projected into 3D. Notice that globally, the problem is not convex, but that there is a well-behaved bowl-shaped region near the origin. Practically, we know that two scenes that we are trying to register will represent pictures of the world taken very close in time (i.e.~1/30th of a second), and thus the rotation and translation will not be large because the sensor will be moving smoothly and slowly compared to the frame rate. Thus, it makes sense to consider constraining our optimization problem to small translations and rotations. For translations, the simplest way to do this is to constrain the length of the translation vector: $\|T_x^2 + T_y^2 + T_z^2\| \leq \epsilon_1$. 
-Then we can use projected gradient descent to solve our problem: for each gradient update based on the unconstrained problem in the previous section, 
-we make the update and then project it to back to rectangular surface. Euclidean projection onto a rectangle simply replaces coordinates outside the rectangle by their upper or lower bound (whichever is closer) \cite[p. 399]{boyd2004convex}.
+In Figure \ref{figure:likelihood} in the Appendix, we show a likelihood surface based on synthetic data, projected into 3D. Notice that globally, the problem is not convex, but that there is a well-behaved bowl-shaped region near the origin. Practically, we know that two scenes that we are trying to register will represent pictures of the world taken very close in time (i.e.~1/30th of a second), and thus the rotation and translation will not be large because the sensor will be moving smoothly and slowly compared to the frame rate. Thus, it makes sense to consider further constraining our optimization problem to small translations and rotations. For translations, the simplest way to do this is to constrain the length of the translation vector: $\|T_x^2 + T_y^2 + T_z^2\|^2_2 \leq \epsilon_1$. For rotations, a small rotation angle is equivalent to having the real component of the quaternion, $T_s$, be close to $1$ \cite{wheeler1995} (the intuition is that for a unit length quaternion $T_q$, if $T_s$ parameter is close to $1$, $T_q$ is close to the identity quaternion $[1 0 0 0]^T$). Thus we add the constraint $T_s^2 \geq 1-\epsilon_2$.
+
+We can again use projected gradient descent to incorporate these two new constraints: for each gradient update step we first normalize $q$ as described above, then we check whether $\|T_x^2 + T_y^2 + T_z^2\|^2_2 \leq \epsilon_1$ and if it's not, we linearly scale it so that $\|T_x^2 + T_y^2 + T_z^2\|^2_2 = \epsilon_1$. Finally, we check whether $T_s^2 \geq 1-\epsilon_2$. If it's not, we set $T_s^2 = 1-\epsilon_2$ and renormalize $T_q$. 
 
 \subsection{Newton's method}
+\label{sec:newton}
 Once we've done the work of calculating the gradient, the derivation of the Hessian is a natural, albeit quite math-intensive, extension. Newton's method requires inverting the Hessian, which is a $7 \times 7$ matrix, so this is a relatively cheap operation, and we expect that Newton's method will show large improvements in terms of the convergence rate as compared to gradient descent. We show parts of the derivation, omitting full details for space\footnote{We further note that numerically approximating the Hessian based on the analytically derived gradient may give suitable results, while avoiding implementation errors}:
 \begin{align*}
 \frac{\partial^2 }{\partial T_x \partial T_y} \Sigma &= \frac{\partial^2}{\partial T_x \partial T_y} K_{**} - \left(\frac{\partial^2}{\partial T_x \partial T_y}K_{*}\right) [K + \sigma^2 I]^{-1} K_*^T - K_{*} [K + \sigma^2 I]^{-1} \frac{\partial^2}{\partial T_x \partial T_y} K_*^T \\
