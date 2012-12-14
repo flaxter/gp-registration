@@ -1,0 +1,62 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{nips12submit_e,times,soul}
+%\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
+
+
+\title{10-725 Midterm Progress Report -- Fast Point Cloud Registration using Gaussian Processes (TA: Shiva)}
+
+\begin{document}
+Lagrangian with the 14 extra upper/lower bound constraints for each variable (the $\epsilon$'s are constant):
+P(T) is the unconstrained original probability score.
+$$
+L(T,\lambda) = P(T)
++ \lambda_1 (t_x-\epsilon_0) + \lambda_2 (-t_x - \epsilon_0)
++ \lambda_3 (t_y-\epsilon_0) + \lambda_4 (-t_y - \epsilon_0)
++ \lambda_5 (t_z-\epsilon_0) + \lambda_6 (-t_z - \epsilon_0)
++ \lambda_7 (q_1-\epsilon_1) + \lambda_8 (-q_1 - \epsilon_1)
+$$
+$$
++ \lambda_9 (q_2-\epsilon_2) + \lambda_{10} (-q_2 - \epsilon_2)
++ \lambda_{11} (q_3-\epsilon_2) + \lambda_{12} (-q_3 - \epsilon_2)
++ \lambda_{13} (q_4-\epsilon_2) + \lambda_{14} (-q_4 - \epsilon_2)
+)
+$$
+Gradient with respect to the 21-D parameter space (where each of the $\frac{dP}{dx}$ terms signifies the partial derivative in the unconstrained problem:
+$$
+\nabla P = [
+\frac{dP}{dt_x} + \lambda_1 - \lambda_2,
+\frac{dP}{dt_y} + \lambda_1 - \lambda_2,
+\frac{dP}{dt_z} + \lambda_1 - \lambda_2,
+\frac{dP}{q_1} + \lambda_1 - \lambda_2,
+\frac{dP}{q_2} + \lambda_1 - \lambda_2,
+\frac{dP}{q_3} + \lambda_1 - \lambda_2,
+\frac{dP}{q_4} + \lambda_1 - \lambda_2,
+$$
+$$
+t_x-\epsilon_0,
+-t_x-\epsilon_0,
+t_y-\epsilon_0,
+-t_y-\epsilon_0,
+t_z-\epsilon_0,
+-t_z-\epsilon_0,
+q_1-\epsilon_1,
+-q_1-\epsilon_1,
+q_2-\epsilon_2,
+-q_2-\epsilon_2,
+q_3-\epsilon_2,
+-q_3-\epsilon_2,
+q_4-\epsilon_2,
+-q_4-\epsilon_2
+]
+$$
+
+And the new parameter space is:
+
+$T = [t_x,t_y,t_z,
+q_1,q_2,q_3,q_4,
+\lambda_{1},\lambda_{2},\lambda_{3},\lambda_{4},\lambda_{5},\lambda_{6},\lambda_{7},\lambda_{8},
+,\lambda_{9},\lambda_{10},\lambda_{11},\lambda_{12},\lambda_{13},\lambda_{14}]
+$
+
+
+\end{document}
