@@ -46,7 +46,7 @@ Pittsburgh, PA 15213 \\
 
 \begin{abstract}
 
-3D range sensing is now ubiquitous in the field of mobile robots. However, many modern 3D range sensors, such as the Velodyne or Kinect, generate massive amounts of data, on the order of one million data points per second,  so it can be challenging to apply standard optimization algorithms for purposes of real-time perception. When given the task of semantic scene understanding, simultaneous localization and mapping (SLAM), tracking, and other low-level perceptual tasks, it is important to be able to reduce these massive point clouds into a more tractable structure to allow real-time computation. We propose transforming the raw data points from 3D sensors to a scene representation based on Gaussian Processes to aid real-time surface construction, registration, and mapping through time. We focus on the registration problem, showing how we can formulate the problem of finding the optimal rigid transformation of a new set of points as an optimization problem. We use {\bf matrix calculus} to derive various solutions to this optimization problem through {\bf backtracking projected gradient descent} and {\bf Newton's method}, and explain how to incorporate extra constraints. Finally, we implement the gradient descent method using {\bf Cholesky decomposition} to insure speed and numerical stability, and compare its performance to the existing Iterative Closest Point (ICP) algorithm.
+3D range sensing is now ubiquitous in the field of mobile robots. However, many modern 3D range sensors, such as the Velodyne or Kinect, generate massive amounts of data, on the order of one million data points per second,  so it can be challenging to apply standard optimization algorithms for purposes of real-time perception. When given the task of semantic scene understanding, simultaneous localization and mapping (SLAM), tracking, and other low-level perceptual tasks, it is important to be able to reduce these massive point clouds into a more tractable structure to allow real-time computation. We propose transforming the raw data points from 3D sensors to a scene representation based on Gaussian Processes to aid real-time surface construction, registration, and mapping through time. We focus on the registration problem, showing how we can formulate the problem of finding the optimal rigid transformation of a new set of points as an optimization problem. We use {\bf matrix calculus} to derive various solutions to this optimization problem through {\bf backtracking projected gradient descent} and {\bf Newton's method}, and explain how to incorporate extra constraints. Finally, we implement the gradient descent method using {\bf Cholesky decomposition} to ensure speed and numerical stability, and compare its performance to the existing Iterative Closest Point (ICP) algorithm.
 
 \end{abstract}
 
@@ -63,11 +63,11 @@ Assuming a large point cloud can be described parametrically by a few surfaces, 
 \section{Proposed Method}
 
 We propose a novel Gaussian Process (GP)-based formulation of the point cloud registration problem.
-We state the problem as follows: given a set of 3D points $\mathbf{X}$ ({\bf the scene}), and a set of points $\mathbf{X'}$ ({\bf the new}), find the most likely rigid transformation $T$ of $\mathbf{X'}$ to match the points in $X$. 
+We state the problem as follows: given a set of 3D points $\mathbf{X}$ ({\bf the scene}), and a set of points $\mathbf{X'}$ ({\bf the new}), find the most likely rigid transformation $T$ of $\mathbf{X'}$ to match the points in $\mathbf{X}$. 
 To formulate this as an optimization problem, we first use GPs to fit a smooth surface $S$ to $\mathbf{X}$. Then we optimize over
-rigid transformations $T$ to maximize the likelihood of seeing transformed points $T(\mathbf{X'})$ given $S$. We parameterize $T$ as a translation in 3D: $(T_x, T_y, T_z)$ and a quaternion rotation in 3D: $T_q = (T_s, T_u, T_v, T_w)$ . Our GP formulation and derivation is in Section \ref{sec:math}.
+rigid transformations $T$ to maximize the likelihood of seeing transformed points $T(\mathbf{X'})$ given $S$. We parameterize $T$ as a translation in 3D: $(T_x, T_y, T_z)$ and a quaternion rotation in 3D: $T_q = (T_s, T_u, T_v, T_w)$. Our GP formulation and derivation is in Section \ref{sec:math}.
 
-We propose to use gradient descent and Newton's method to solve our novel registration problem. The formulation and derivations we given in Sections \ref{sec:gradient} and \ref{sec:newton} are original.
+We propose to use gradient descent and Newton's method to solve our novel registration problem. The formulation and derivations in Sections \ref{sec:gradient}, \ref{sec:interm} and \ref{sec:newton} are original.
 
  %we can look at the probability of a ``scene'' having generated those points according to some surface model. If the probability of a point is %$p(\mathbf{x_i}|\mathbf{\Theta{}})$, where $\mathbf{\Theta{}}$ is the set of parameters describing the scene, then the total probability of an entire %scan of data is $p(\mathbf{X}|\mathbf{\Theta{}}) = \prod_{i} p(\mathbf{x_i}|\mathbf{\Theta{}})$. In our problem, we wish to optimize over some spatial %transformation in 3D space. Thus, we can minimize over the negative log-likelihood of the data with respect to the transformation parameters,
 
@@ -261,6 +261,7 @@ equivalent to the preceding derivation, with the following simplification: $\fra
 To implement gradient descent, we use the gradient in our update step. We used the standard backtracking line search to find a suitable step-size. Backtracking line search iteratively descreases the stepsize while evaluating the likelihood function to find a suitable descent amount \cite[p. 464]{boyd2004convex}.
 
 \subsection{Projected gradient descent}
+\label{sec:interm}
 As explained in \cite{wheeler1995}, although quaternions have 4 parameters, the space of rotations in 3D is best parameterized by quaternions of length 1. This turns our unconstrained optimization problem into a constrained problem with a simple constraint: $||T_q||^2_2 = 1$. We can solve this problem using projected gradient descent: after doing the gradient update, we simply project the new parameter $T$ to the space in which $||T_q||^2_2 = 1$
 by renormalizing: $T_q' = \frac{T_q}{||T_q||^2_2}$.
 
@@ -298,15 +299,15 @@ Again, this depends on the choice of kernel. Derivations with $T_z$ and $T_q$ ar
         \begin{subfigure}[b]{0.5\textwidth}
                 \centering
                 \includegraphics[width=\textwidth]{2DGaussianProcess2.pdf}
-                \caption{Reconstructed mean surface from a grid of $X'$}
+                \caption{Reconstructed mean surface over a grid $X'$}
                 \label{fig:mean}
         \end{subfigure}
-        \caption{The left shows a real surface with samples drawn from it, representing $\mathbf{X}$. The right shows the mean construction using $\mathbf{X}$ a grid of new points, $\mathbf{X'}$}\label{fig:GP}
+        \caption{The left shows a real surface with samples drawn from it, representing $\mathbf{X}$. The right shows the mean of a reconstructed surface based on the sampled points $\mathbf{X}$ predicted at a grid of points $\mathbf{X'}$.}\label{fig:GP}
 \end{figure}
 
 \section{Implementation and Experimental Setup}
 
-We used \emph{Python} to implement our algorithm and we vectorized all our mathematics using the \emph{numpy} toolchain. For speed and numerical stability, we used Cholesky decomposition on our kernel covariance matrices and cached inverses where possible. By using the triangular decomposition of our covariance matrices, we could solve to sets of linear equations in order to find the inverses. Overall, the algorithm runs in $O(N_1^3 + N_2^3)$, which is comparable to SVD-based implementations of ICP.
+We used \emph{Python} to implement our algorithm and we vectorized all our mathematics using the \emph{numpy} toolchain. For speed and numerical stability, we used Cholesky decomposition on our kernel covariance matrices and cached inverses where possible. By using the triangular decomposition of our covariance matrices, we could solve two sets of linear equations in order to find the inverses. Overall, the algorithm runs in $O(N_1^3 + N_2^3)$, which is comparable to SVD-based implementations of ICP.
 
 For our experiments, we generated simulated elevation data. An example elevation map can be seen in Figure \ref{fig:elevation}. The actual surface is unknown, but the sensor information we have represents a non-uniform subsampling of the surface, shown in the figure by the red dots. By running the standard GP formulation, we can derive a mean and variance around any elevation value for any point $(x',y')$ in the map. Figure \ref{fig:mean} shows the means of a grid of points $\mathbf{X'}$, plotted as a 3D surface. Note that the reconstructed surface most closely resembles the actual surface in the middle, where there is the most information from nearby sampled points. Around the edges, though not shown, the variance around the mean is much greater, indicating a lack of confidence about the true location of the surface. This effect is to be expected, and is an important reason why our registration algorithm is robust to different sampling densities.
 
