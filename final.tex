@@ -251,8 +251,9 @@ Again, this depends on the choice of kernel. Derivations with $T_z$ are similar 
 
 \section{Results}
 
-\section{Conclusion}
-
+\section{Conclusions and Future Work}
+Based on our derivation and tests, Gaussian Processes can represent and recover the transformation of a 3D scene. The convergence rate and speed of Gaussian Processes with gradient descent outperforms ICP. We still need to evaluate GPs with Newton's method, and both methods with real point cloud data. With real data, we will need to investigate how practical considerations like the choice of kernel affects performance---sharp corners, for example, might not be well-captured by the squared exponential kernel.
+Finally, our method only handles elevation data; further development is necessary to model the density of general 3D point clouds. 
 
 \bibliographystyle{./IEEEtran}
 % argument is your BibTeX string definitions and bibliography database(s)
