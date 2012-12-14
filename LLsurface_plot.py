@@ -212,6 +212,7 @@ def runTests():
             hist(mse[i,:], color=color[i], bins=arange(0,5.0,0.35))
             ylim(0,100.0)
             xlabel("Mean Squared Error (MSE)")
+            print mse[i,:]
             if i==1: ylabel("Frequency (out of 100)")
             legend([legendLbl[i]], loc='upper right')
             #X = sorted(mse[i,:])

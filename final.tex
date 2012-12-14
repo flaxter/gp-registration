@@ -284,33 +284,6 @@ The second term in the likelihood requires finding:
 \end{align*}
 Again, this depends on the choice of kernel. Derivations with $T_z$ and $T_q$ are similar, requiring the correct application of matrix calculus as in the previous section. To finish the derivation, we proceed as in the previous section. Taking another partial derivative of Equation \ref{eq:inversecov} is quite messy, requiring repeated application of the product rule and the identity  $\partial(X^{-1}) = - X^{-1} (\partial X) X^{-1}$.
 
-%\begin{figure}[h]
-%\begin{center}
-%%\framebox[4.0in]{$\;$}
-%\fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-%\end{center}
-%\caption{Sample figure caption.}
-%\end{figure}
-
- 
-\begin{figure}
-        \centering
-        \begin{subfigure}[b]{0.5\textwidth}
-                \centering
-                \includegraphics[width=\textwidth]{LL.pdf}
-                \caption{Convergence rate }
-                \label{fig:elevation}
-        \end{subfigure}%
-        ~ %add desired spacing between images, e. g. ~, \quad, \qquad etc. 
-          %(or a blank line to force the subfigure onto a new line)
-        \begin{subfigure}[b]{0.5\textwidth}
-                \centering
-                \includegraphics[width=\textwidth]{scaling3.pdf}
-                \caption{Time until convergence for different $N_1$}
-                \label{fig:mean}
-        \end{subfigure}
-        \caption{Summary here...}\label{fig:GP}
-\end{figure}
 
 \begin{figure}
         \centering
@@ -328,32 +301,57 @@ Again, this depends on the choice of kernel. Derivations with $T_z$ and $T_q$ ar
                 \caption{Reconstructed mean surface from a grid of $X'$}
                 \label{fig:mean}
         \end{subfigure}
-        \caption{The left shows a real surface with samples drawn from it, representing $\mathbf{X}$. The right shows the mean construction using a grid of points, $\mathbf{X'}$}\label{fig:GP}
+        \caption{The left shows a real surface with samples drawn from it, representing $\mathbf{X}$. The right shows the mean construction using $\mathbf{X}$ a grid of new points, $\mathbf{X'}$}\label{fig:GP}
 \end{figure}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=5in]{goodnessoffit2.pdf}
-\end{center}
-\caption{Goodness of fit results for 100 random $T$.}
-\label{figure:mse}
-\end{figure}
+\section{Implementation and Experimental Setup}
 
+We used \emph{Python} to implement our algorithm and we vectorized all our mathematics using the \emph{numpy} toolchain. For speed and numerical stability, we used Cholesky decomposition on our kernel covariance matrices and cached inverses where possible. By using the triangular decomposition of our covariance matrices, we could solve to sets of linear equations in order to find the inverses. Overall, the algorithm runs in $O(N_1^3 + N_2^3)$, which is comparable to SVD-based implementations of ICP.
 
+For our experiments, we generated simulated elevation data. An example elevation map can be seen in Figure \ref{fig:elevation}. The actual surface is unknown, but the sensor information we have represents a non-uniform subsampling of the surface, shown in the figure by the red dots. By running the standard GP formulation, we can derive a mean and variance around any elevation value for any point $(x',y')$ in the map. Figure \ref{fig:mean} shows the means of a grid of points $\mathbf{X'}$, plotted as a 3D surface. Note that the reconstructed surface most closely resembles the actual surface in the middle, where there is the most information from nearby sampled points. Around the edges, though not shown, the variance around the mean is much greater, indicating a lack of confidence about the true location of the surface. This effect is to be expected, and is an important reason why our registration algorithm is robust to different sampling densities.
 
-\section{Experimental Setup}
-
-For the following experiments, we generated simulated elevation data. An example elevation map can be seen in Figure \ref{fig:elevation}.
+For our experiments, we generated 100 random $T$, chosen from a uniform distribution of translations bounded by the unit cube and rotations bounded by 15 degrees on each axis. We compared with a standard implementation of the ICP algorithm~\cite{besl_method_1992}. 
 
 
 \section{Results}
 
-ICP converges faster, but often to a poorer local minimum.
+\begin{figure}
+\begin{center}
+\includegraphics[width=5.7in]{goodnessoffit3.pdf}
+\end{center}
+\caption{Goodness of fit results for 100 random $T$.}
+\label{fig:mse}
+\end{figure}
+
+Given 100 random $T$, we applied the transformation to the surface and subsampled a set of new points, $N_2$. Given that we know the true surface elevation values since we use simulated data, we can check the overall mean squared error (MSE) between the final transformed points and the original surface. Over all 100 transformations our method achieved a 0.518 +/- 0.032 MSE, while ICP had an average MSE of 1.384 +/- 0.104. A more detailed breakdown of this result can be seen in Figure \ref{fig:mse}. Here we can see that sometimes ICP achieves a better MSE, but this result is very rare and most often ICP gets stuck in a local minimum that is worse than the minimum found by the GP method.
+
+
+\begin{figure}
+        \centering
+        \begin{subfigure}[b]{0.5\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{LL.pdf}
+                \caption{Convergence rate }
+                \label{fig:convergence}
+        \end{subfigure}%
+        ~ %add desired spacing between images, e. g. ~, \quad, \qquad etc. 
+          %(or a blank line to force the subfigure onto a new line)
+        \begin{subfigure}[b]{0.5\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{scaling3.pdf}
+                \caption{Time until convergence for different $N_1$}
+                \label{fig:timing}
+        \end{subfigure}
+        \caption{The left subfigure shows a sample run of the GP registration algorithm. Note the very quick convergence in the first few iterations. The right subfigure shows that the GP method incurs a modest overhead as compared to ICP.}\label{fig:tests1}
+\end{figure}
+
+To be useful, a registration method must be both fast and accurate, converging quickly to a near-optimal solution. Our convergence rate is shown graphically in Figure \ref{fig:convergence}. In just a few iterations, we reach a near-minimum negative log-likelihood. Figure \ref{fig:timing} shows the actual time in seconds until convergence for each algorithm as the number of points in the scene is varied. ICP converges faster, but often to a poorer local minimum as we saw in Figure \ref{fig:mse}. We consider the additional overhead an acceptable tradeoff in order to achieve a more robust optimization procedure that is less likely to diverge or get stuck in local minima.
 
 \section{Conclusion}
 Gaussian Processes can represent and recover the transformation of a 3D scene. The convergence rate of Gaussian Processes outperforms ICP,
 and the speed is not too much slower. The performance needs to be evaluated with real point cloud data, and subsampling of both the scene and the new points should be considered as a possible speedup. Real point cloud data might also warrant a different choice of kernel or further tuning of the kernel parameters. It is also important to try an experimental evaluation of the Newton's method-based optimization.
 We noticed much better performance with small transformations, which motivated the constrained version of our problem. We did not discuss how to choose the constraints $\epsilon_1$ and $\epsilon_2$---if a real system was being built, these would be derived from the angular velocity, speed, and frame rate of the camera. 
+
 
 \bibliographystyle{./IEEEtran}
 % argument is your BibTeX string definitions and bibliography database(s)
