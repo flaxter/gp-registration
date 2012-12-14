@@ -130,17 +130,6 @@ def gp(X, y, pts, K, L, alpha, sigma=0.1):
     return mean, var
     
 def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, returnTraj=False, numerical=True):
-    print X.shape
-    print y.shape
-    print pts.shape
-    print z.shape
-
-    print type(X)
-    print type(y)
-    print type(pts)
-    print type(z)
-
-    print 'Hello'
     # these are constants in the calculations
     K, L, alpha = gp_bootstrap(X,y,sigma) #.4 seconds
     
@@ -160,18 +149,6 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
 
     LL_last = 99e9
 
-    plotSteps=False
-    if plotSteps:
-        from mpl_toolkits.mplot3d import axes3d, Axes3D
-        import matplotlib.pyplot as pl
-        from pylab import ion
-        ion()
-        fig=pl.figure()
-        ax=Axes3D(fig)
-        ax.plot(X[:,0],X[:,1],y,'g.')
-        ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'b.')
-        pl.show()
-
     if verbose > 1:
         print 'translation offset\t negative log likelihood (should be minimized)'
     for i in range(iterations):
@@ -180,107 +157,146 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
         ######################
         # first term  
         ######################   
+
+    
+        Kstar = getK(X,pts)
+        Kstarstar = getK(pts,pts)
+        v = solve(L,Kstar) # L^-1 * Kstar
         
-        if not numerical:     
+        mean = dot(Kstar.T, alpha)
         
-            Kstar = getK(X,pts)
-            Kstarstar = getK(pts,pts)
-            v = solve(L,Kstar) # L^-1 * Kstar
+        # v^T v = (L^-1 Kstar)^T (L^-1 Kstar) = kstar^T (K + sigma^2 I)^-1 kstar
+        var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(Kstarstar.shape[0])
+        #var = -dot(v.T,v) + (1.0+sigma**2)*eye(Kstarstar.shape[0])
+        
+        gr = 0
+        for i, pti in enumerate(Xnew):
+            meani = mean[i]
+            vari = var[i,i]
             
-            mean = dot(Kstar.T, alpha)
+            print pti, meani, vari
             
-            # v^T v = (L^-1 Kstar)^T (L^-1 Kstar) = kstar^T (K + sigma^2 I)^-1 kstar
-            var = Kstarstar - dot(v.T,v) + (sigma**2)*eye(Kstarstar.shape[0])
-            Lvar = cholesky(var)
+            kstar = getK(X, [pti[:2]])
+
+            dsi, dui, dvi, dwi = dRotate(q, pti[0], pti[1], pti[2])
             
-            # tensor split into 6 matrices
-            # the following calculations will come in groups of 6 now
-            dKstar_x, dKstar_y, dKstar_s, dKstar_u, dKstar_v, dKstar_w = getDK(X, pts, Xnew, q) 
+            grad_x = array([1.0,0.0,0.0,dsi[0],dui[0],dvi[0],dwi[0]])
+            grad_y = array([0.0,1.0,0.0,dsi[1],dui[1],dvi[1],dwi[1]])
+            grad_z = array([0.0,0.0,1.0,dsi[2],dui[2],dvi[2],dwi[2]])
             
-            # calculating derivative of the first term:
-            v_dKstar_x = solve(L, dKstar_x) # L^-1 dKstar1 (for x)
-            v_dKstar_y = solve(L, dKstar_y) # L^-1 dKstar2 (for y)
-            v_dKstar_s = solve(L, dKstar_s)
-            v_dKstar_u = solve(L, dKstar_u)
-            v_dKstar_v = solve(L, dKstar_v)
-            v_dKstar_w = solve(L, dKstar_w)
+            dk = zeros((y.shape[0],7))
+            for j, ptj in enumerate(X):
+                dk[j,:] = -kstar[j] * ((pti[0]-ptj[0])*grad_x + (pti[1]-ptj[1])*grad_y)
+                
+            dmu = dot(dk.T, alpha)
             
-            dKstarstar_ds, dKstarstar_du, dKstarstar_dv, dKstarstar_dw = getDKstarstar(pts, Xnew, q)
-               
-            # -Kstar^T (K + sigma^2 I)^-1 dKstar1 - DKstar^T (K + sigma^2 I)^-1 Kstar1 
-            dCov_x = -dot(v.T, v_dKstar_x) - dot(v_dKstar_x.T, v) # (for x)
-            dCov_y = -dot(v.T, v_dKstar_y) - dot(v_dKstar_y.T, v) # (for y)
-            dCov_s = dKstarstar_ds - dot(v.T, v_dKstar_s) - dot(v_dKstar_s.T, v)
-            dCov_u = dKstarstar_du - dot(v.T, v_dKstar_u) - dot(v_dKstar_u.T, v)
-            dCov_v = dKstarstar_dv - dot(v.T, v_dKstar_v) - dot(v_dKstar_v.T, v)
-            dCov_w = dKstarstar_dw - dot(v.T, v_dKstar_w) - dot(v_dKstar_w.T, v)
+            v1 = solve(L,kstar)
+            v2 = solve(L,dk)
             
-            # (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1)
-            Dx = solve(Lvar.T, solve(Lvar, dCov_x)) 
-            Dy = solve(Lvar.T, solve(Lvar, dCov_y))
-            Ds = solve(Lvar.T, solve(Lvar, dCov_s))
-            Du = solve(Lvar.T, solve(Lvar, dCov_u))
-            Dv = solve(Lvar.T, solve(Lvar, dCov_v))
-            Dw = solve(Lvar.T, solve(Lvar, dCov_w))
+            dvar = -2.0*dot(v1.T,v2)
+             
+            total_gradient = dvar*(.5*(vari**-1) - 0.5*(vari**-2) * (meani - pti[2])**2)
+            total_gradient += (vari**-1) * (meani - pti[2]) * (dmu - grad_z)
+            gr += total_gradient
+ 
+        gr = gr / Xnew.shape[0]
             
-            # as per Seth's equations, we take the trace of these bad boys
-            dx = -0.5*trace(Dx) 
-            dy = -0.5*trace(Dy)
-            ds = -0.5*trace(Ds)
-            print 0.5*trace(Ds)
-            du = -0.5*trace(Du)
-            dv = -0.5*trace(Dv)
-            dw = -0.5*trace(Dw)
-            
-            ######################
-            # now the second term  
-            ######################
-            
-            dz_ds, dz_du, dz_dv, dz_dw = dRotate(q, Xnew[:,0], Xnew[:,1], Xnew[:,2])        
-            # this extracts only the dz/dq components
-            dz_ds, dz_du, dz_dv, dz_dw = dz_ds[:,2], dz_du[:,2], dz_dv[:,2], dz_dw[:,2]        
-              
-            # errors in z
-            delt = z - mean
-            
-            # a lot packed in here...
-            # -2 (z - mean)^T (var)^-1 dKstar^T (K + sigma^2 I)^-1 * y   
-            dx += dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_x.T, alpha))))
-            dy += dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_y.T, alpha))))
-            ds += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))  
-            print dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))         
-            du += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_du + dot(dKstar_u.T, alpha))))
-            dv += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dv + dot(dKstar_v.T, alpha))))
-            dw += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dw + dot(dKstar_w.T, alpha))))
-            
-            # even more here...
-            # - (z - mean)^T (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1) (var)^-1 (z - mean)
-            tmp = solve(Lvar.T, solve(Lvar, delt))
-            dx += 0.5*dot(dot(delt.T, Dx), tmp)
-            dy += 0.5*dot(dot(delt.T, Dy), tmp)
-            ds += 0.5*dot(dot(delt.T, Ds), tmp)
-            print 0.5*dot(dot(delt.T, Ds), tmp)
-            du += 0.5*dot(dot(delt.T, Du), tmp)
-            dv += 0.5*dot(dot(delt.T, Dv), tmp)
-            dw += 0.5*dot(dot(delt.T, Dw), tmp)
-            
-            # z is super easy...
-            Dz = ones((mean.shape[0],1))
-            v1 = solve(Lvar, delt) # L^-1 (z - mean)
-            v2 = solve(Lvar, Dz)   # L^-1 (1's)
-            
-            # (z - mean)^T (cov)^-1 1's 
-            # (the one's vector just sums it up)
-            dz = dot(v1.T, v2)[0]
+        
+        Lvar = cholesky(var)
+        
+        # tensor split into 6 matrices
+        # the following calculations will come in groups of 6 now
+        dKstar_x, dKstar_y, dKstar_s, dKstar_u, dKstar_v, dKstar_w = getDK(X, pts, Xnew, q) 
+        
+        # calculating derivative of the first term:
+        v_dKstar_x = solve(L, dKstar_x) # L^-1 dKstar1 (for x)
+        v_dKstar_y = solve(L, dKstar_y) # L^-1 dKstar2 (for y)
+        v_dKstar_s = solve(L, dKstar_s)
+        v_dKstar_u = solve(L, dKstar_u)
+        v_dKstar_v = solve(L, dKstar_v)
+        v_dKstar_w = solve(L, dKstar_w)
+        
+        dKstarstar_ds, dKstarstar_du, dKstarstar_dv, dKstarstar_dw = getDKstarstar(pts, Xnew, q)
+           
+        # -Kstar^T (K + sigma^2 I)^-1 dKstar1 - DKstar^T (K + sigma^2 I)^-1 Kstar1 
+        dCov_x = -dot(v.T, v_dKstar_x) - dot(v_dKstar_x.T, v) # (for x)
+        dCov_y = -dot(v.T, v_dKstar_y) - dot(v_dKstar_y.T, v) # (for y)
+        dCov_s = dKstarstar_ds - dot(v.T, v_dKstar_s) - dot(v_dKstar_s.T, v)
+        dCov_u = dKstarstar_du - dot(v.T, v_dKstar_u) - dot(v_dKstar_u.T, v)
+        dCov_v = dKstarstar_dv - dot(v.T, v_dKstar_v) - dot(v_dKstar_v.T, v)
+        dCov_w = dKstarstar_dw - dot(v.T, v_dKstar_w) - dot(v_dKstar_w.T, v)
+        '''dCov_s = -dot(v.T, v_dKstar_s) - dot(v_dKstar_s.T, v)
+        dCov_u = -dot(v.T, v_dKstar_u) - dot(v_dKstar_u.T, v)
+        dCov_v = -dot(v.T, v_dKstar_v) - dot(v_dKstar_v.T, v)
+        dCov_w = -dot(v.T, v_dKstar_w) - dot(v_dKstar_w.T, v)'''
+        
+        
+        # (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1)
+        Dx = solve(Lvar.T, solve(Lvar, dCov_x)) 
+        Dy = solve(Lvar.T, solve(Lvar, dCov_y))
+        Ds = solve(Lvar.T, solve(Lvar, dCov_s))
+        Du = solve(Lvar.T, solve(Lvar, dCov_u))
+        Dv = solve(Lvar.T, solve(Lvar, dCov_v))
+        Dw = solve(Lvar.T, solve(Lvar, dCov_w))
+        
+        # as per Seth's equations, we take the trace of these bad boys
+        dx = -0.5*trace(Dx) 
+        dy = -0.5*trace(Dy)
+        ds = -0.5*trace(Ds)
+        print 0.5*trace(Ds)
+        du = -0.5*trace(Du)
+        dv = -0.5*trace(Dv)
+        dw = -0.5*trace(Dw)
+        
+        ######################
+        # now the second term  
+        ######################
+        
+        dz_ds, dz_du, dz_dv, dz_dw = dRotate(q, Xnew[:,0], Xnew[:,1], Xnew[:,2])        
+        # this extracts only the dz/dq components
+        dz_ds, dz_du, dz_dv, dz_dw = dz_ds[:,2], dz_du[:,2], dz_dv[:,2], dz_dw[:,2]        
+          
+        # errors in z
+        delt = z - mean
+        
+        # a lot packed in here...
+        # -2 (z - mean)^T (var)^-1 dKstar^T (K + sigma^2 I)^-1 * y   
+        dx += dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_x.T, alpha))))
+        dy += dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_y.T, alpha))))
+        ds += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))  
+        print dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))         
+        du += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_du + dot(dKstar_u.T, alpha))))
+        dv += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dv + dot(dKstar_v.T, alpha))))
+        dw += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dw + dot(dKstar_w.T, alpha))))
+        
+        # even more here...
+        # - (z - mean)^T (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1) (var)^-1 (z - mean)
+        tmp = solve(Lvar.T, solve(Lvar, delt))
+        dx += 0.5*dot(dot(delt.T, Dx), tmp)
+        dy += 0.5*dot(dot(delt.T, Dy), tmp)
+        ds += 0.5*dot(dot(delt.T, Ds), tmp)
+        print 0.5*dot(dot(delt.T, Ds), tmp)
+        du += 0.5*dot(dot(delt.T, Du), tmp)
+        dv += 0.5*dot(dot(delt.T, Dv), tmp)
+        dw += 0.5*dot(dot(delt.T, Dw), tmp)
+        
+        # z is super easy...
+        Dz = ones((mean.shape[0],1))
+        v1 = solve(Lvar, delt) # L^-1 (z - mean)
+        v2 = solve(Lvar, Dz)   # L^-1 (1's)
+        
+        # (z - mean)^T (cov)^-1 1's 
+        # (the one's vector just sums it up)
+        dz = dot(v1.T, v2)[0]
             
         N = z.shape[0]
 
-        def check_transform(stepX=0,stepY=0,stepZ=0,s=0,u=0,v=0,w=0):
-            return transformPtsQ(Xnew, normalizeQ(q - array([s,u,v,w])), 
+        def check_transform(stepX=0,stepY=0,stepZ=0,ss=0,u=0,v=0,w=0):
+            return transformPtsQ(Xnew, normalizeQ(q - array([ss,u,v,w])), 
                                        array([tx-stepX,ty-stepY,tz-stepZ]))
 
-        def check_likelihood(stepX=0,stepY=0,stepZ=0,s=0,u=0,v=0,w=0, cache=None):
-            Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - array([s,u,v,w])), 
+        def check_likelihood(stepX=0,stepY=0,stepZ=0,sss=0,u=0,v=0,w=0, cache=None):
+            Xnew_transformed = transformPtsQ(Xnew, normalizeQ(q - array([sss,u,v,w])), 
                                        array([tx-stepX,ty-stepY,tz-stepZ]))
             pts = Xnew_transformed[:,0:2]
             z = Xnew_transformed[:,2]        
@@ -291,29 +307,32 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
                 mean, var = gp_chol(X, y, pts, sigma=sigma)
             return getLogL_chol(mean, var, z)
 
-        delta = 1e-8
+        delta = 1e-9
         cache = gp_bootstrap(X,y,sigma)
         l = check_likelihood(cache=cache)
 
-        if not numerical:
-            print "x %.05f vs %.05f"%(dx,(check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta)
-            print "y %.05f vs %.05f"%(dy,(check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta)
-            print "z %.05f vs %.05f"%(dz,(check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta)
-            print "s %.05f vs %.05f"%(ds,(check_likelihood(s=-1 * delta, cache=cache) - l) / delta)
-            print "u %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta, cache=cache) - l) / delta)
-            print "v %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta, cache=cache) - l) / delta)
-            print "w %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta, cache=cache) - l) / delta)
-            #raw_input()
+        gr = gr[0,:]
+        print "x %.05f vs %.05f vs %.05f"%(dx,(check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta, gr[0])
+        print "y %.05f vs %.05f vs %.05f"%(dy,(check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta, gr[1])
+        print "z %.05f vs %.05f vs %.05f"%(dz,(check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta, gr[2])
+        print "s %.05f vs %.05f vs %.05f"%(ds,(check_likelihood(sss=-1 * delta, cache=cache) - l) / delta, gr[3])
+        print "u %.05f vs %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta, cache=cache) - l) / delta, gr[4])
+        print "v %.05f vs %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta, cache=cache) - l) / delta, gr[5])
+        print "w %.05f vs %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta, cache=cache) - l) / delta, gr[6])
+        raw_input()
+            
         
         import numpy as np
         if numerical:
             dx = (check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta
             dy = (check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta
             dz = (check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta
-            ds = (check_likelihood(s=-1 * delta, cache=cache) - l) / delta
+            #print normalizeQ(array([ds, du, dv, dw]))
+            ds = (check_likelihood(sss=-1 * delta, cache=cache) - l) / delta
             du = (check_likelihood(u=-1 * delta, cache=cache) - l) / delta
             dv = (check_likelihood(v=-1 * delta, cache=cache) - l) / delta
             dw = (check_likelihood(w=-1 * delta, cache=cache) - l) / delta
+            #print normalizeQ(array([ds, du, dv, dw]))
         if False:
             Hess = np.zeros([7,7],float)
             deltasqrt2 = delta * sqrt(2)
@@ -353,12 +372,6 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             print '%5.4f\t'*8 % (tx, ty, tz, 
                                  q[0], q[1], q[2], q[3], 
                                  LL)
-        if plotSteps:
-            ax.clear()
-            ax.plot(X[:,0],X[:,1],y,'g.')
-            ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'b.')
-            ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
-            #pl.draw()
 
         if abs((LL-LL_last)/LL_last) < 1e-5: 
             break # or LL-LL_last > 0: break
@@ -370,24 +383,6 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
     if verbose > 0:
         print 'Stopped at iteration %d' % i
         print tx, ty, tz, likelihood
-
-    if plotSteps:
-        for i in range(len(Ts)):
-            T = Ts[i]
-            tx=T[0]
-            ty=T[1]
-            tz=T[2]
-            q=T[3]
-
-            Xnew_transformed = transformPtsQ(Xnew, q, array([tx,ty,tz]))
-            ax.clear()
-            ax.plot(X[:,0],X[:,1],y,'g.')
-            ax.plot(Xnew[:,0],Xnew[:,1],Xnew[:,2],'b.')
-            ax.plot(Xnew_transformed[:,0],Xnew_transformed[:,1],Xnew_transformed[:,2],'r.')
-            pl.draw()
-            import time
-            time.sleep(0.01)
-        time.sleep(10)
         
     if returnTraj:
         return q, [tx, ty, tz], likelihood, Ts
@@ -624,24 +619,11 @@ def test():
     qReal = array([s_tmp, u, v, w])
     print qReal
     print 'Translation', T_vector
-    X,y,pts,z = case2D(randPoints=False, randPointsScene=True, plotIt=False, 
-                       T_vector=T_vector, qReal=qReal, n1=100, n2=50,#*50, 
+    X,y,pts,z = case2D(randPoints=True, randPointsScene=True, plotIt=False, 
+                       T_vector=T_vector, qReal=qReal, n1=100, n2=1,#*50, 
                        sigma=sigma)
-#    X2,y2,pts2,z2 = case2D(randPoints=True, plotIt=False, 
-#                       T_vector=T_vector, qReal=qReal, n1=200, n2=100, 
-#                       sigma=sigma)
-#    import numpy as np
-#    X=np.concatenate([X,X2],0)
-#    y=np.concatenate([y,y2],0)
-#    pts=np.concatenate([pts,pts2],0)
-#    z=np.concatenate([z,z2],0)
-
-    #print X,y,pts,z
-    #exit()
     
-    #raw_input()
-    
-    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200, beta=0.015, numerical=False)
+    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200, beta=0.015, numerical=True)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)
