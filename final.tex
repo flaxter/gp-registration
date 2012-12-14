@@ -1,5 +1,5 @@
 \documentclass{article} % For LaTeX2e
-\usepackage{nips12submit_e,times,soul,amsmath}
+\usepackage{nips12submit_e,times,soul,amsmath,graphicx}
 %\documentstyle[nips12submit_09,times,art10]{article} % For LaTeX 2.09
 
 
@@ -213,6 +213,15 @@ where we used the identity $\partial(X^{-1}) = - X^{-1} (\partial X) X^{-1}$ \ci
 For space, we do not show the final expression. We also need to find $\frac{\partial \log \mathbf{L}}{\partial t}$. This is essentially
 equivalent to the preceding derivation, with the following simplification: $\frac{\partial }{\partial t} T(x_i) = 1$ so we can omit the $2C(\cdot)$ function from the preceding expressions.
 
+To implement gradient descent, we use the gradient in our update step. Choosing a suitable step-size can easily be done with standard backtracking line search by evaluating the likelihood function at various scalar multiples of the gradient \cite[p. 464]{boyd2004convex}.
+
+\subsection{Projected gradient descent}
+\hl{Discuss projection onto $\|q\|=1$ here?}
+
+In Figure \ref{figure:likelihood} in the Appendix, we show a synthetic likelihood surface projected into 3D, showing a rotation around one axis and a translation along one axis. Notice that globally, the problem is not convex, but that there is a nice bowl-shaped region near the origin. Practically, we know that two scenes that we are trying to register will represent pictures of the world taken very close in time (i.e.~1/30th of a second), and thus the rotation and translation will not be large because the sensor will be moving smoothly and slowly compared to the frame rate. Thus, it makes sense to consider constraining our optimization problem to small translations and rotations. The simplest way to do this is to add a rectangular constraint, constraining each coordinate of $T$ to be in a range $[u_i,l_i]$. 
+Then we can use projected gradient descent to solve our problem: for each gradient update based on the unconstrained problem in the previous section, 
+we make the update and then project it to back to rectangular surface. Euclidean projection onto a rectangle simply replaces coordinates outside the rectangle by their upper or lower bound (whichever is closer) \cite[p. 399]{boyd2004convex}.
+
 \subsection{Newton's method}
 Once we've done the work of calculating the gradient, the derivation of the Hessian is a natural, albeit quite math-intensive, extension. Newton's method requires inverting the Hessian, which is a $7 \times 7$ matrix, so this is a relatively cheap operation, and we expect that Newton's method will show large improvements in terms of the convergence rate as compared to gradient descent. We show parts of the derivation, omitting full details for space\footnote{We further note that numerically approximating the Hessian based on the analytically derived gradient may give suitable results, while avoiding implementation errors}:
 \begin{align*}
@@ -238,14 +247,22 @@ Again, this depends on the choice of kernel. Derivations with $T_z$ are similar 
 
 
 
-\section{Progress in Relation to Initial Plan}
+\section{Experimental Setup}
 
-We have experimented with simulated datasets in Matlab and a large outdoor LIDAR dataset of Oakland and the CMU campus~\cite{munoz2009contextual}, using simplistic versions of the algorithm presented here to test feasibility. Looking at the structure of the problem, our biggest computational hurdle will be the inverse of the kernel matrix. However, we can threshold our kernel to achieve a sparse matrix, thereby allowing efficient inversion routines, and as we originally planned, we will continue to explore our solution under the CUDA framework on a GPU. We have not completed the serial version of the proposed algorithm, so we are slightly behind on that goal, but so far our overarching plan has not changed. 
+\section{Results}
 
+\section{Conclusion}
 
 
 \bibliographystyle{./IEEEtran}
 % argument is your BibTeX string definitions and bibliography database(s)
 \bibliography{./IEEEabrv,./full}
 
+\section{Appendix}
+
+\begin{figure}
+\includegraphics[width=7in]{LLmap3.pdf}
+\caption{2-D Projection of the likelihood along $t_y$ and $\theta_z$}
+\label{figure:likelihood}
+\end{figure}
 \end{document}
