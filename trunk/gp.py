@@ -206,10 +206,6 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             v_dKstar_w = solve(L, dKstar_w)
             
             dKstarstar_ds, dKstarstar_du, dKstarstar_dv, dKstarstar_dw = getDKstarstar(pts, Xnew, q)
-            
-            print dKstarstar_ds
-            print dKstarstar_du
-            raw_input()
                
             # -Kstar^T (K + sigma^2 I)^-1 dKstar1 - DKstar^T (K + sigma^2 I)^-1 Kstar1 
             dCov_x = -dot(v.T, v_dKstar_x) - dot(v_dKstar_x.T, v) # (for x)
@@ -230,11 +226,11 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             # as per Seth's equations, we take the trace of these bad boys
             dx = -0.5*trace(Dx) 
             dy = -0.5*trace(Dy)
-            ds = 0 #-0.5*trace(Ds)
-            du = 0 #-0.5*trace(Du)
-            print -0.5*trace(Du)
-            dv = 0#-0.5*trace(Dv)
-            dw = 0#-0.5*trace(Dw)
+            ds = -0.5*trace(Ds)
+            print 0.5*trace(Ds)
+            du = -0.5*trace(Du)
+            dv = -0.5*trace(Dv)
+            dw = -0.5*trace(Dw)
             
             ######################
             # now the second term  
@@ -251,19 +247,22 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             # -2 (z - mean)^T (var)^-1 dKstar^T (K + sigma^2 I)^-1 * y   
             dx += dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_x.T, alpha))))
             dy += dot(delt.T,solve(Lvar.T, solve(Lvar, dot(dKstar_y.T, alpha))))
-            ds += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))          
+            ds += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))  
+            print dot(delt.T,solve(Lvar.T, solve(Lvar, dz_ds + dot(dKstar_s.T, alpha))))         
             du += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_du + dot(dKstar_u.T, alpha))))
             dv += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dv + dot(dKstar_v.T, alpha))))
             dw += dot(delt.T,solve(Lvar.T, solve(Lvar, dz_dw + dot(dKstar_w.T, alpha))))
             
             # even more here...
             # - (z - mean)^T (var)^-1 (-2 * Kstar^T (K + sigma^2 I)^-1 dKstar1) (var)^-1 (z - mean)
-            dx += 0.5*dot(dot(delt.T, Dx), solve(Lvar.T, solve(Lvar, delt)))
-            dy += 0.5*dot(dot(delt.T, Dy), solve(Lvar.T, solve(Lvar, delt)))
-            ds += 0.5*dot(dot(delt.T, Ds), solve(Lvar.T, solve(Lvar, delt)))
-            du += 0.5*dot(dot(delt.T, Du), solve(Lvar.T, solve(Lvar, delt)))
-            dv += 0.5*dot(dot(delt.T, Dv), solve(Lvar.T, solve(Lvar, delt)))
-            dw += 0.5*dot(dot(delt.T, Dw), solve(Lvar.T, solve(Lvar, delt)))
+            tmp = solve(Lvar.T, solve(Lvar, delt))
+            dx += 0.5*dot(dot(delt.T, Dx), tmp)
+            dy += 0.5*dot(dot(delt.T, Dy), tmp)
+            ds += 0.5*dot(dot(delt.T, Ds), tmp)
+            print 0.5*dot(dot(delt.T, Ds), tmp)
+            du += 0.5*dot(dot(delt.T, Du), tmp)
+            dv += 0.5*dot(dot(delt.T, Dv), tmp)
+            dw += 0.5*dot(dot(delt.T, Dw), tmp)
             
             # z is super easy...
             Dz = ones((mean.shape[0],1))
@@ -292,7 +291,7 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
                 mean, var = gp_chol(X, y, pts, sigma=sigma)
             return getLogL_chol(mean, var, z)
 
-        delta = 1e-7
+        delta = 1e-8
         cache = gp_bootstrap(X,y,sigma)
         l = check_likelihood(cache=cache)
 
@@ -304,17 +303,17 @@ def gradientDescent(X,y,pts,z,sigma=0.1,verbose=2,iterations=35,beta=0.0005, ret
             print "u %.05f vs %.05f"%(du,(check_likelihood(u=-1 * delta, cache=cache) - l) / delta)
             print "v %.05f vs %.05f"%(dv,(check_likelihood(v=-1 * delta, cache=cache) - l) / delta)
             print "w %.05f vs %.05f"%(dw,(check_likelihood(w=-1 * delta, cache=cache) - l) / delta)
-            raw_input()
+            #raw_input()
         
         import numpy as np
         if numerical:
-            dx = (check_likelihood(stepX=-1 * delta) - l) / delta
-            dy = (check_likelihood(stepY=-1 * delta) - l) / delta
-            dz = (check_likelihood(stepZ=-1 * delta) - l) / delta
-            ds = (check_likelihood(s=-1 * delta) - l) / delta
-            du = (check_likelihood(u=-1 * delta) - l) / delta
-            dv = (check_likelihood(v=-1 * delta) - l) / delta
-            dw = (check_likelihood(w=-1 * delta) - l) / delta
+            dx = (check_likelihood(stepX=-1 * delta, cache=cache) - l) / delta
+            dy = (check_likelihood(stepY=-1 * delta, cache=cache) - l) / delta
+            dz = (check_likelihood(stepZ=-1 * delta, cache=cache) - l) / delta
+            ds = (check_likelihood(s=-1 * delta, cache=cache) - l) / delta
+            du = (check_likelihood(u=-1 * delta, cache=cache) - l) / delta
+            dv = (check_likelihood(v=-1 * delta, cache=cache) - l) / delta
+            dw = (check_likelihood(w=-1 * delta, cache=cache) - l) / delta
         if False:
             Hess = np.zeros([7,7],float)
             deltasqrt2 = delta * sqrt(2)
@@ -642,7 +641,7 @@ def test():
     
     #raw_input()
     
-    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200, beta=0.01, numerical=False)
+    q, t, LL = gradientDescent(X,y,pts,z,sigma=sigma, iterations=200, beta=0.015, numerical=False)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)

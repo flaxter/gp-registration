@@ -110,7 +110,7 @@ def LLsurface_plot(randPoints=True, n1=100, n2=100, generate=generate, sigma=0.0
 def animPoints():
     sigma = 0.1
 
-    T_vector = [.075,-.02,.03]
+    T_vector = [.25,-.2,.3]
     qReal = Q.rotate('Z', vectors.radians(-15)) * Q.rotate('Y', vectors.radians(-15))
     u, v, w, s = qReal
     qReal = array([s, u, v, w])
@@ -120,7 +120,7 @@ def animPoints():
                                qReal=qReal, n1=100, n2=100, 
                                sigma=sigma, generate=generate)
 
-    q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=250, beta=0.01, returnTraj=True)
+    q, t, LL, Ts = gradientDescent(X,y,pts,z,sigma=sigma, iterations=150, beta=0.01, returnTraj=True, numerical=False)
     print 'Real Translation', around(T_vector, decimals=2)
     print 'Real Rotation'
     print around(rotQ(qReal), decimals=2)
@@ -263,7 +263,7 @@ def runScalingTests():
 
 if __name__ == '__main__':
     #LLsurface_plot(n1=500, n2=25)
-    #animPoints()
+    animPoints()
     
     #runTests()
-    runScalingTests()
+    #runScalingTests()
